@@ -1,6 +1,9 @@
 package org.lable.util.uniqueid;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -24,6 +27,9 @@ public class UniqueIDGenerator {
       the timestamp used must take place between the Unix epoch (1970-01-01T00:00:00.000) and 2109.
     */
 
+    final static Map<String, UniqueIDGenerator> instances =
+            Collections.synchronizedMap(new HashMap<String, UniqueIDGenerator>());
+
     final int generatorId;
     final int clusterId;
 
@@ -36,15 +42,34 @@ public class UniqueIDGenerator {
      * @param generatorId Generator ID to use (0 <= n < 64).
      * @param clusterId   Cluster ID to use (0 <= n < 16).
      */
-    public UniqueIDGenerator(int generatorId, int clusterId) {
+    UniqueIDGenerator(int generatorId, int clusterId) {
+        // Package private on purpose.
+        this.generatorId = generatorId;
+        this.clusterId = clusterId;
+    }
+
+    /**
+     * Return the UniqueIDGenerator instance for this generator-ID, cluster-ID combination.
+     *
+     * @param generatorId Generator ID to use (0 <= n < 64).
+     * @param clusterId   Cluster ID to use (0 <= n < 16).
+     */
+    public static UniqueIDGenerator generatorFor(int generatorId, int clusterId) {
+
         if (generatorId < 0 || generatorId >= 64) {
             throw new IllegalArgumentException("Invalid generator-ID: " + generatorId + " (0 <= n < 64)");
         }
         if (clusterId < 0 || clusterId >= 16) {
             throw new IllegalArgumentException("Invalid cluster-ID: " + clusterId + " (0 <= n < 16)");
         }
-        this.generatorId = generatorId;
-        this.clusterId = clusterId;
+
+        String generatorAndCluster = String.format("%d_%d", generatorId, clusterId);
+        synchronized (instances) {
+            if (!instances.containsKey(generatorAndCluster)) {
+                instances.put(generatorAndCluster, new UniqueIDGenerator(generatorId, clusterId));
+            }
+            return instances.get(generatorAndCluster);
+        }
     }
 
     /**
@@ -52,7 +77,8 @@ public class UniqueIDGenerator {
      *
      * @return The generated ID.
      */
-    public byte[] generate() {
+    public synchronized byte[] generate() {
+
         long now = System.currentTimeMillis();
         if (now == previousTimestamp) {
             sequence++;
@@ -67,10 +93,10 @@ public class UniqueIDGenerator {
                 Thread.currentThread().interrupt();
             }
         }
+        previousTimestamp = now;
 
         Blueprint blueprint = new Blueprint(now, sequence, generatorId, clusterId);
 
-        previousTimestamp = now;
         return mangleBytes(blueprint);
     }
 
