@@ -1,8 +1,6 @@
 package org.lable.util.uniqueid.zookeeper;
 
 
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.Rule;
 import org.junit.Test;
@@ -11,7 +9,7 @@ import java.io.IOException;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.lable.util.uniqueid.zookeeper.ResourcePoolHelper.prepareClusterID;
+import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareClusterID;
 
 public class ClusterIDIT {
 

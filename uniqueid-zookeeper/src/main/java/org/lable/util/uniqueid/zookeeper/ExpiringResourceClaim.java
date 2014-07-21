@@ -26,11 +26,11 @@ public class ExpiringResourceClaim extends ResourceClaim {
         }, timeout);
     }
 
-    public static ResourceClaim claim(int poolSize) throws IOException {
-        return claim(poolSize, DEFAULT_TIMEOUT);
+    public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize) throws IOException {
+        return claim(zookeeper, poolSize, DEFAULT_TIMEOUT);
     }
 
-    public static ResourceClaim claim(int poolSize, long timeout) throws IOException {
-        return new ExpiringResourceClaim(ZooKeeperConnection.get(), poolSize, timeout);
+    public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize, long timeout) throws IOException {
+        return new ExpiringResourceClaim(zookeeper, poolSize, timeout);
     }
 }

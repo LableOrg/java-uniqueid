@@ -72,6 +72,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
         }
         state = State.CLAIM_RELINQUISHED;
         relinquishResource(zookeeper, POOL_NODE, resource);
+        ZooKeeperConnection.unregisterObserver(this);
     }
 
     /**
@@ -230,6 +231,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
                         throw e;
                     }
                 }
+                logger.debug("Successfully claimed resource {}.", resourcePath);
                 return i;
             }
         }
@@ -257,7 +259,9 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
 
     @Override
     public void disconnected() {
+        logger.debug("Disconnected from ZooKeeper quorum, this invalidates the claim to resource {}.", resource);
         state = State.CLAIM_RELINQUISHED;
+        ZooKeeperConnection.unregisterObserver(this);
     }
 
     @Override

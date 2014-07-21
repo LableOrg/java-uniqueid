@@ -1,6 +1,9 @@
 package org.lable.util.uniqueid;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -103,17 +106,22 @@ public abstract class UniqueIDGenerator {
     }
 
     /**
-     * Close this generator. Call this method when you are done generating ID's so any resources held may be
-     * relinquished.
+     * Generate a batch of ID's. This is the preferred way of generating ID's when you expect to use a lot of ID's.
+     *
+     * @param size How many ID's to generate.
+     * @return A stack of ID's.
+     * @throws GeneratorException              Thrown when an ID could not be generated. In practice,
+     *                                         this exception is usually only thrown by the more complex subclasses of
+     *                                         {@link org.lable.util.uniqueid.UniqueIDGenerator}.
+     * @throws java.lang.IllegalStateException Thrown when this method is called after {@link #close()} has been
+     *                                         called.
      */
-    public void close() {
-        closed = true;
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-        close();
+    public Deque<byte[]> batch(int size) throws GeneratorException {
+        Deque<byte[]> stack = new ArrayDeque<byte[]>();
+        for (int i = 0; i < size; i++) {
+            stack.add(generate());
+        }
+        return stack;
     }
 
     /**

@@ -1,8 +1,6 @@
 package org.lable.util.uniqueid.zookeeper;
 
-import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.Before;
 import org.junit.Rule;
@@ -17,8 +15,8 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.core.CombinableMatcher.both;
 import static org.junit.Assert.assertThat;
-import static org.lable.util.uniqueid.zookeeper.ResourcePoolHelper.prepareClusterID;
-import static org.lable.util.uniqueid.zookeeper.ResourcePoolHelper.prepareEmptyQueueAndPool;
+import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareClusterID;
+import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareEmptyQueueAndPool;
 
 public class ExpiringResourceClaimIT {
 
@@ -39,7 +37,7 @@ public class ExpiringResourceClaimIT {
 
     @Test
     public void expirationTest() throws IOException, InterruptedException {
-        ResourceClaim claim = ExpiringResourceClaim.claim(64, TimeUnit.SECONDS.toMillis(2));
+        ResourceClaim claim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), 64, TimeUnit.SECONDS.toMillis(2));
         int resource = claim.get();
         assertThat(claim.state, is(ResourceClaim.State.HAS_CLAIM));
         assertThat(resource, is(both(greaterThanOrEqualTo(0)).and(lessThan(64))));

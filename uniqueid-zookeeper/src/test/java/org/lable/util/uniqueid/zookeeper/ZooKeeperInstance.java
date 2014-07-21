@@ -140,7 +140,7 @@ public class ZooKeeperInstance extends ExternalResource {
             try {
                 super.shutdown();
             } catch (Throwable e) {
-                //
+                // Ignore.
             }
         }
 

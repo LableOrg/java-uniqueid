@@ -8,8 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -26,7 +26,7 @@ public enum ZooKeeperConnection {
      */
     final static int CONNECTION_TIMEOUT = 10;
 
-    final List<ZooKeeperConnectionObserver> observers = new ArrayList<ZooKeeperConnectionObserver>();
+    final Queue<ZooKeeperConnectionObserver> observers = new ConcurrentLinkedQueue<ZooKeeperConnectionObserver>();
 
     ZooKeeper zookeeper = null;
     static String quorumAddresses = null;

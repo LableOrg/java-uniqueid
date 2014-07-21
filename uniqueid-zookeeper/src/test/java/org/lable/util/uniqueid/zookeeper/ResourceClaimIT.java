@@ -1,11 +1,9 @@
 package org.lable.util.uniqueid.zookeeper;
 
 
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -16,8 +14,8 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.core.CombinableMatcher.both;
 import static org.junit.Assert.assertThat;
-import static org.lable.util.uniqueid.zookeeper.ResourcePoolHelper.prepareClusterID;
-import static org.lable.util.uniqueid.zookeeper.ResourcePoolHelper.prepareEmptyQueueAndPool;
+import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareClusterID;
+import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareEmptyQueueAndPool;
 
 public class ResourceClaimIT {
 
@@ -35,9 +33,15 @@ public class ResourceClaimIT {
 
     @Test
     public void claimTest() throws IOException {
-        //ZooKeeperConnection.configure("zka,zkb,zkc");
         ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), 2);
         int resource = claim.get();
         assertThat(resource, is(both(greaterThanOrEqualTo(0)).and(lessThan(2))));
+    }
+
+    @Test
+    @Ignore
+    public void testAgainstRealQuorum() throws IOException {
+        ZooKeeperConnection.configure("zka,zkb,zkc");
+        claimTest();
     }
 }

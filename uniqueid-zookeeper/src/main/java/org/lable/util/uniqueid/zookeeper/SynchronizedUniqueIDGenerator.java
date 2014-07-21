@@ -2,6 +2,8 @@ package org.lable.util.uniqueid.zookeeper;
 
 import org.lable.util.uniqueid.GeneratorException;
 import org.lable.util.uniqueid.UniqueIDGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -14,11 +16,11 @@ import java.io.IOException;
  * ID's at that time.
  * <p/>
  * Because claimed generator ID's are automatically returned to the pool after a set time
- * ({@link org.lable.util.uniqueid.zookeeper.ExpiringResourceClaim#DEFAULT_TIMEOUT}), there is no guarantee that a
- *
- * @see #close()
+ * ({@link org.lable.util.uniqueid.zookeeper.ExpiringResourceClaim#DEFAULT_TIMEOUT}),
+ * there is no guarantee that ID's generated have the same generator ID.
  */
 public class SynchronizedUniqueIDGenerator extends UniqueIDGenerator {
+    final static Logger logger = LoggerFactory.getLogger(SynchronizedUniqueIDGenerator.class);
 
     ResourceClaim resourceClaim;
     final int poolSize;
@@ -44,13 +46,13 @@ public class SynchronizedUniqueIDGenerator extends UniqueIDGenerator {
      * @throws IOException Thrown when something went wrong trying to find the cluster ID or trying to claim a
      *                     generator ID.
      */
-    public static SynchronizedUniqueIDGenerator generator() throws IOException {
-        int clusterId = ClusterID.get(ZooKeeperConnection.get());
-        assertParameterWithinBounds("cluster-ID", 0, MAX_CLUSTER_ID, clusterId);
-
+    public static synchronized SynchronizedUniqueIDGenerator generator() throws IOException {
         if (instance == null) {
+            int clusterId = ClusterID.get(ZooKeeperConnection.get());
+            assertParameterWithinBounds("cluster-ID", 0, MAX_CLUSTER_ID, clusterId);
+            logger.debug("Creating new instance.");
             int poolSize = UniqueIDGenerator.MAX_GENERATOR_ID + 1;
-            ResourceClaim resourceClaim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize);
+            ResourceClaim resourceClaim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), poolSize);
             instance = new SynchronizedUniqueIDGenerator(resourceClaim, clusterId);
         }
         return instance;
@@ -60,27 +62,19 @@ public class SynchronizedUniqueIDGenerator extends UniqueIDGenerator {
      * {@inheritDoc}
      */
     @Override
-    public byte[] generate() throws GeneratorException {
+    public synchronized byte[] generate() throws GeneratorException {
         try {
             generatorId = resourceClaim.get();
         } catch (IllegalStateException e) {
             // Claim expired?
             resourceClaim.close();
             try {
-                resourceClaim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize);
-            } catch (IOException e1) {
-                throw new GeneratorException(e);
+                resourceClaim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), poolSize);
+            } catch (IOException ioe) {
+                throw new GeneratorException(ioe);
             }
             generatorId = resourceClaim.get();
         }
         return super.generate();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void close() {
-        resourceClaim.close();
     }
 }
