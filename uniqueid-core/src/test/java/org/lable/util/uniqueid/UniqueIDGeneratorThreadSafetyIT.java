@@ -3,7 +3,9 @@ package org.lable.util.uniqueid;
 import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -29,11 +31,16 @@ public class UniqueIDGeneratorThreadSafetyIT {
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    UniqueIDGenerator generator = UniqueIDGenerator.generatorFor(1, 1);
-                    for (int i = 0; i < iterationCount; i++) {
-                        byte[] id = generator.generate();
-                        String asHex = Hex.encodeHexString(id);
-                        ids.add(asHex);
+                    UniqueIDGenerator generator = LocalUniqueIDGenerator.generatorFor(1, 1);
+                    try {
+                        for (int i = 0; i < iterationCount; i++) {
+                            byte[] id = generator.generate();
+                            String asHex = Hex.encodeHexString(id);
+                            ids.add(asHex);
+                        }
+                    } catch (GeneratorException e) {
+                        // Test will fail due to missing IDs.
+                        e.printStackTrace();
                     }
                     latch.countDown();
                 }
@@ -67,11 +74,16 @@ public class UniqueIDGeneratorThreadSafetyIT {
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    UniqueIDGenerator generator = UniqueIDGenerator.generatorFor(profile[0], profile[1]);
-                    for (int i = 0; i < iterationCount; i++) {
-                        byte[] id = generator.generate();
-                        String asHex = Hex.encodeHexString(id);
-                        ids.add(asHex);
+                    UniqueIDGenerator generator = LocalUniqueIDGenerator.generatorFor(profile[0], profile[1]);
+                    try {
+                        for (int i = 0; i < iterationCount; i++) {
+                            byte[] id = generator.generate();
+                            String asHex = Hex.encodeHexString(id);
+                            ids.add(asHex);
+                        }
+                    } catch (GeneratorException e) {
+                        // Test will fail due to missing IDs.
+                        e.printStackTrace();
                     }
                     latch.countDown();
                 }

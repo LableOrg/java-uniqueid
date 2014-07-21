@@ -5,19 +5,22 @@
   <groupId>org.lable.util.uniqueid</groupId>
   <artifactId>uniqueid</artifactId>
   <version>1.0-SNAPSHOT</version>
-  <modules>
-    <module>uniqueid-core</module>
-  </modules>
   <packaging>pom</packaging>
 
   <name>Unique ID generator</name>
   <description>A unique ID generator that specialises in small IDs.</description>
+
+  <modules>
+    <module>uniqueid-core</module>
+    <module>uniqueid-zookeeper</module>
+  </modules>
 
   <properties>
     <jdkLevel>1.6</jdkLevel>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <zookeeper.version>3.4.5</zookeeper.version>
     <powermock.version>1.5.1</powermock.version>
     <junit.version>4.11</junit.version>
     <scm.url>scm:git:ssh://git@jira:7999/LABLE/uniqueid.git</scm.url>
@@ -30,8 +33,44 @@
     <tag>HEAD</tag>
   </scm>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <artifactId>uniqueid-core</artifactId>
+        <groupId>org.lable.util.uniqueid</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.zookeeper</groupId>
+        <artifactId>zookeeper</artifactId>
+        <version>${zookeeper.version}</version>
+        <exclusions>
+          <!-- http://stackoverflow.com/questions/4908651/the-following-artifacts-could-not-be-resolved-javax-jmsjmsjar1-1 -->
+          <exclusion>
+            <groupId>com.sun.jmx</groupId>
+            <artifactId>jmxri</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.sun.jdmk</groupId>
+            <artifactId>jmxtools</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.jms</groupId>
+            <artifactId>jms</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <!-- Testing dependencies. -->
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <version>1.3</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-module-junit4</artifactId>
@@ -67,12 +106,6 @@
           <artifactId>hamcrest-core</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
-      <version>1.3</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>

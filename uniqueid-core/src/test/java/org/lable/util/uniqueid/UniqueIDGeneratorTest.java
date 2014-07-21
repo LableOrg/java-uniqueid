@@ -4,9 +4,16 @@ import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertThat;
 
 public class UniqueIDGeneratorTest {
+
+    /*
+     * Byte mangling tests.
+     */
+
     @Test
     public void mangleBytesZero() {
         final byte[] result = UniqueIDGenerator.mangleBytes(new UniqueIDGenerator.Blueprint(0, 0, 0, 0));
@@ -18,7 +25,12 @@ public class UniqueIDGeneratorTest {
 
     @Test
     public void mangleBytesMostlyOnes() {
-        final byte[] result = UniqueIDGenerator.mangleBytes(new UniqueIDGenerator.Blueprint(0xFFFFFFFFFFFFFFFFL, 63, 63, 15));
+        final byte[] result = UniqueIDGenerator.mangleBytes(new UniqueIDGenerator.Blueprint(
+                UniqueIDGenerator.MAX_TIMESTAMP,
+                UniqueIDGenerator.MAX_SEQUENCE_COUNTER,
+                UniqueIDGenerator.MAX_GENERATOR_ID,
+                UniqueIDGenerator.MAX_CLUSTER_ID
+        ));
         // The "03" for the 7th byte is due to the reserved bits that are (for now) always zero.
         final String expected = "ffffffffffff03ff";
 
@@ -89,16 +101,40 @@ public class UniqueIDGeneratorTest {
         // Round-trip test. First generate the byte[] with mangleBytes, then back to the blueprint with Blueprint.parse.
 
         final long TEST_TS = 143062936275L;
-        final byte[] resultOne = UniqueIDGenerator.mangleBytes(new UniqueIDGenerator.Blueprint(TEST_TS, 10, 1, 5));
+        final byte[] resultOne = UniqueIDGenerator.mangleBytes(
+                new UniqueIDGenerator.Blueprint(TEST_TS, 10, 1, 5));
         final UniqueIDGenerator.Blueprint blueprint_one = UniqueIDGenerator.parse(resultOne);
         assertThat(resultOne, is(blueprint_one.getID()));
 
-        final byte[] resultZeros = UniqueIDGenerator.mangleBytes(new UniqueIDGenerator.Blueprint(0, 0, 0, 0));
+        final byte[] resultZeros = UniqueIDGenerator.mangleBytes(
+                new UniqueIDGenerator.Blueprint(0, 0, 0, 0));
         final UniqueIDGenerator.Blueprint blueprintZeros = UniqueIDGenerator.parse(resultZeros);
         assertThat(resultZeros, is(blueprintZeros.getID()));
 
-        final byte[] resultMostlyOnes = UniqueIDGenerator.mangleBytes(new UniqueIDGenerator.Blueprint(0xFFFFFFFFFFFFFFFFL, 63, 63, 15));
+        final byte[] resultMostlyOnes = UniqueIDGenerator.mangleBytes(new UniqueIDGenerator.Blueprint(
+                UniqueIDGenerator.MAX_TIMESTAMP,
+                UniqueIDGenerator.MAX_SEQUENCE_COUNTER,
+                UniqueIDGenerator.MAX_GENERATOR_ID,
+                UniqueIDGenerator.MAX_CLUSTER_ID
+        ));
         final UniqueIDGenerator.Blueprint blueprintMostlyOnes = UniqueIDGenerator.parse(resultMostlyOnes);
         assertThat(resultMostlyOnes, is(blueprintMostlyOnes.getID()));
+    }
+
+    /*
+     * Other tests.
+     */
+
+    @Test
+    public void blueprintToStringTest() {
+        UniqueIDGenerator.Blueprint blueprint =
+                new UniqueIDGenerator.Blueprint(System.currentTimeMillis(), 0, 0, 0);
+        assertThat(blueprint.toString(), is(notNullValue()));
+        assertThat(blueprint.toString().length(), is(not(0)));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void blueprintParseIllegalArgument() {
+        UniqueIDGenerator.parse(new byte[0]);
     }
 }

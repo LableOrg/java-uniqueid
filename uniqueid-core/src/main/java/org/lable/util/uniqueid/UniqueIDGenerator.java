@@ -1,9 +1,8 @@
 package org.lable.util.uniqueid;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -12,7 +11,7 @@ import java.util.concurrent.TimeUnit;
  * i.e., there is only one ID-generator using that specific combination of generator-ID and cluster-ID within the
  * confines of your computing environment at the moment you generate an ID — then the ID's returned are unique.
  */
-public class UniqueIDGenerator {
+public abstract class UniqueIDGenerator {
     /*
       The eight byte ID is composed as follows:
       TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTSSSSSS ......GG GGGGCCCC
@@ -27,14 +26,34 @@ public class UniqueIDGenerator {
       the timestamp used must take place between the Unix epoch (1970-01-01T00:00:00.000) and 2109.
     */
 
-    final static Map<String, UniqueIDGenerator> instances =
-            Collections.synchronizedMap(new HashMap<String, UniqueIDGenerator>());
+    /**
+     * Maximum timestamp, this represents a date somewhen in 2109.
+     */
+    public final static long MAX_TIMESTAMP = 0x3FFFFFFFFFFL;
 
-    final int generatorId;
-    final int clusterId;
+    /**
+     * ID's using the same timestamp are limited to 64 variations.
+     */
+    public final static int MAX_SEQUENCE_COUNTER = 63;
+
+    /**
+     * Upper bound (inclusive) of the generator-ID.
+     */
+    public final static int MAX_GENERATOR_ID = 63;
+
+    /**
+     * Upper bound (inclusive) of the cluster-ID.
+     */
+    public final static int MAX_CLUSTER_ID = 15;
+
+
+    protected int generatorId;
+    protected int clusterId;
 
     long previousTimestamp = 0;
     int sequence = 0;
+
+    protected boolean closed = false;
 
     /**
      * Create a new UniqueIDGenerator instance.
@@ -42,42 +61,25 @@ public class UniqueIDGenerator {
      * @param generatorId Generator ID to use (0 <= n < 64).
      * @param clusterId   Cluster ID to use (0 <= n < 16).
      */
-    UniqueIDGenerator(int generatorId, int clusterId) {
-        // Package private on purpose.
+    protected UniqueIDGenerator(int generatorId, int clusterId) {
         this.generatorId = generatorId;
         this.clusterId = clusterId;
-    }
-
-    /**
-     * Return the UniqueIDGenerator instance for this generator-ID, cluster-ID combination.
-     *
-     * @param generatorId Generator ID to use (0 <= n < 64).
-     * @param clusterId   Cluster ID to use (0 <= n < 16).
-     */
-    public static UniqueIDGenerator generatorFor(int generatorId, int clusterId) {
-
-        if (generatorId < 0 || generatorId >= 64) {
-            throw new IllegalArgumentException("Invalid generator-ID: " + generatorId + " (0 <= n < 64)");
-        }
-        if (clusterId < 0 || clusterId >= 16) {
-            throw new IllegalArgumentException("Invalid cluster-ID: " + clusterId + " (0 <= n < 16)");
-        }
-
-        String generatorAndCluster = String.format("%d_%d", generatorId, clusterId);
-        synchronized (instances) {
-            if (!instances.containsKey(generatorAndCluster)) {
-                instances.put(generatorAndCluster, new UniqueIDGenerator(generatorId, clusterId));
-            }
-            return instances.get(generatorAndCluster);
-        }
     }
 
     /**
      * Generate a fresh ID.
      *
      * @return The generated ID.
+     * @throws GeneratorException              Thrown when an ID could not be generated. In practice,
+     *                                         this exception is usually only thrown by the more complex subclasses of
+     *                                         {@link org.lable.util.uniqueid.UniqueIDGenerator}.
+     * @throws java.lang.IllegalStateException Thrown when this method is called after {@link #close()} has been
+     *                                         called.
      */
-    public synchronized byte[] generate() {
+    public synchronized byte[] generate() throws GeneratorException {
+        if (closed) {
+            throw new IllegalStateException("Close was already called on this generator, refusing to generate an ID.");
+        }
 
         long now = System.currentTimeMillis();
         if (now == previousTimestamp) {
@@ -85,7 +87,7 @@ public class UniqueIDGenerator {
         } else {
             sequence = 0;
         }
-        if (sequence >= 64) {
+        if (sequence > MAX_SEQUENCE_COUNTER) {
             try {
                 TimeUnit.MILLISECONDS.sleep(1);
                 return generate();
@@ -101,18 +103,43 @@ public class UniqueIDGenerator {
     }
 
     /**
+     * Close this generator. Call this method when you are done generating ID's so any resources held may be
+     * relinquished.
+     */
+    public void close() {
+        closed = true;
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
+        close();
+    }
+
+    /**
+     * Helper method that throws an {@link java.lang.IllegalArgumentException} when a number is not within the
+     * supplied range.
+     *
+     * @param name      Name of the parameter to use in the Exception message.
+     * @param lower     Lower bound (inclusive).
+     * @param upper     Upper bound (inclusive).
+     * @param parameter The parameter to test.
+     * @throws java.lang.IllegalArgumentException Thrown when the parameter is out of bounds.
+     */
+    protected static void assertParameterWithinBounds(String name, long lower, long upper, long parameter) {
+        if (parameter < lower || parameter > upper) {
+            throw new IllegalArgumentException(String.format("Invalid %s: %d (expected: %d <= n < %d)",
+                    name, parameter, lower, upper + 1));
+        }
+    }
+
+    /**
      * Perform all the byte mangling needed to create the eight byte ID.
      *
      * @param blueprint Blueprint containing all needed data to work with.
      * @return The 8-byte ID.
      */
     static byte[] mangleBytes(Blueprint blueprint) {
-
-        if (blueprint.getSequence() > 64 || blueprint.getGeneratorId() > 64 || blueprint.getClusterId() > 16) {
-            throw new IllegalArgumentException("Parameters out of bounds. Expected " +
-                    "0 ≤ sequence < 64; 0 ≤ generatorId < 64; 0 ≤ clusterId < 16, but got " + blueprint);
-        }
-
         long reverseTimestamp = Long.reverse(blueprint.getTimestamp());
         // First 42 bits are the reversed timestamp.
         // [0] TTTTTTTT [1] TTTTTTTT [2] TTTTTTTT [3] TTTTTTTT [4] TTTTTTTT [5] TTTTTTTT [6] TT......
@@ -144,7 +171,7 @@ public class UniqueIDGenerator {
      */
     public static Blueprint parse(byte[] id) {
         if (id.length != 8) {
-            throw new IllegalArgumentException("Expected an 8-byte ID, but got: " + id.length + " bytes.");
+            throw new IllegalArgumentException(String.format("Expected an 8-byte ID, but got: %d bytes.", id.length));
         }
 
         byte[] copy = id.clone();
@@ -186,8 +213,16 @@ public class UniqueIDGenerator {
          * @param sequence    Sequence counter.
          * @param generatorId Generator ID.
          * @param clusterId   Cluster ID.
+         * @see org.lable.util.uniqueid.UniqueIDGenerator#MAX_CLUSTER_ID
+         * @see org.lable.util.uniqueid.UniqueIDGenerator#MAX_GENERATOR_ID
          */
         public Blueprint(long timestamp, int sequence, int generatorId, int clusterId) {
+            assertParameterWithinBounds("timestamp", 0, MAX_TIMESTAMP, timestamp);
+            assertParameterWithinBounds("sequence counter", 0, MAX_SEQUENCE_COUNTER, sequence);
+            assertParameterWithinBounds("generator-ID", 0, MAX_GENERATOR_ID, generatorId);
+            assertParameterWithinBounds("cluster-ID", 0, MAX_CLUSTER_ID, clusterId);
+
+
             this.timestamp = timestamp;
             this.sequence = sequence;
             this.generatorId = generatorId;

@@ -9,8 +9,18 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>uniqueid-core</artifactId>
+  <artifactId>uniqueid-zookeeper</artifactId>
 
+  <dependencies>
+    <dependency>
+      <artifactId>uniqueid-core</artifactId>
+      <groupId>org.lable.util.uniqueid</groupId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.zookeeper</groupId>
+      <artifactId>zookeeper</artifactId>
+    </dependency>
+  </dependencies>
 
   <build>
     <plugins>
@@ -24,11 +34,6 @@
 
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
