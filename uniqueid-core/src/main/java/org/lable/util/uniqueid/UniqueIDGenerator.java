@@ -3,9 +3,6 @@ package org.lable.util.uniqueid;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Stack;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -76,8 +73,6 @@ public abstract class UniqueIDGenerator {
      * @throws GeneratorException              Thrown when an ID could not be generated. In practice,
      *                                         this exception is usually only thrown by the more complex subclasses of
      *                                         {@link org.lable.util.uniqueid.UniqueIDGenerator}.
-     * @throws java.lang.IllegalStateException Thrown when this method is called after {@link #close()} has been
-     *                                         called.
      */
     public synchronized byte[] generate() throws GeneratorException {
         if (closed) {
@@ -113,8 +108,6 @@ public abstract class UniqueIDGenerator {
      * @throws GeneratorException              Thrown when an ID could not be generated. In practice,
      *                                         this exception is usually only thrown by the more complex subclasses of
      *                                         {@link org.lable.util.uniqueid.UniqueIDGenerator}.
-     * @throws java.lang.IllegalStateException Thrown when this method is called after {@link #close()} has been
-     *                                         called.
      */
     public Deque<byte[]> batch(int size) throws GeneratorException {
         Deque<byte[]> stack = new ArrayDeque<byte[]>();
