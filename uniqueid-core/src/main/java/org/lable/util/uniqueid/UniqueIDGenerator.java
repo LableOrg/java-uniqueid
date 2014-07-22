@@ -46,14 +46,11 @@ public abstract class UniqueIDGenerator {
      */
     public final static int MAX_CLUSTER_ID = 15;
 
-
     protected int generatorId;
     protected int clusterId;
 
     long previousTimestamp = 0;
     int sequence = 0;
-
-    protected boolean closed = false;
 
     /**
      * Create a new UniqueIDGenerator instance.
@@ -75,9 +72,6 @@ public abstract class UniqueIDGenerator {
      *                                         {@link org.lable.util.uniqueid.UniqueIDGenerator}.
      */
     public synchronized byte[] generate() throws GeneratorException {
-        if (closed) {
-            throw new IllegalStateException("Close was already called on this generator, refusing to generate an ID.");
-        }
 
         long now = System.currentTimeMillis();
         if (now == previousTimestamp) {

@@ -77,7 +77,7 @@ public enum ZooKeeperConnection {
         }
         if (!successfullyConnected) {
             throw new IOException(String.format(
-                    "Connection to ZooKeeper quorum times out after %d seconds.", CONNECTION_TIMEOUT));
+                    "Connection to ZooKeeper quorum timed out after %d seconds.", CONNECTION_TIMEOUT));
         }
 
         zookeeper.register(new ConnectionWatcher());
