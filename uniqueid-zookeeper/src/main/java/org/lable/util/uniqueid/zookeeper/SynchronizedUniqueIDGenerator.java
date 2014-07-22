@@ -77,4 +77,12 @@ public class SynchronizedUniqueIDGenerator extends UniqueIDGenerator {
         }
         return super.generate();
     }
+
+    /**
+     * Return the claimed generator ID to the pool. Call this when you are done generating IDs. If you don't the
+     * claim will expire automatically, but this takes a while.
+     */
+    public void relinquishGeneratorIDClaim() {
+        resourceClaim.close();
+    }
 }

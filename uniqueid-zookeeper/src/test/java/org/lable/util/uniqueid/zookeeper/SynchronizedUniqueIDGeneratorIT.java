@@ -15,12 +15,13 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareClusterID;
 import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareEmptyQueueAndPool;
 
-public class ZooKeeperSynchronizedIT {
+public class SynchronizedUniqueIDGeneratorIT {
 
     @Rule
     public ZooKeeperInstance zkInstance = new ZooKeeperInstance();
@@ -96,5 +97,21 @@ public class ZooKeeperSynchronizedIT {
     public void testAgainstRealQuorum() throws Exception {
         ZooKeeperConnection.configure("zka,zkb,zkc");
         concurrentTest();
+    }
+
+    @Test
+    public void relinquisResourceClaimTest() throws Exception {
+        SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator();
+        generator.generate();
+        int claim1 = generator.resourceClaim.hashCode();
+
+        // Explicitly relinquish the generator ID claim.
+        generator.relinquishGeneratorIDClaim();
+
+        generator.generate();
+        int claim2 = generator.resourceClaim.hashCode();
+
+        // Verify that a new ResourceClaim object was instantiated.
+        assertThat(claim1, is(not(claim2)));
     }
 }
