@@ -300,7 +300,10 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
                     zookeeper.create(poolNode + "/" + resourcePath, new byte[0],
                             ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
                 } catch (KeeperException e) {
-                    if (e.code() != KeeperException.Code.NODEEXISTS) {
+                    if (e.code() == KeeperException.Code.NODEEXISTS) {
+                        // Failed to claim this resource for some reason.
+                        continue;
+                    } else {
                         // Unexpected failure.
                         throw e;
                     }
