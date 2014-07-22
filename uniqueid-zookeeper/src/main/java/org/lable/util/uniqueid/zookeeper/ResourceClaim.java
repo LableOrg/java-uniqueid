@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -19,6 +20,9 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
 
     final static String QUEUE_NODE = "/unique-id-generator/queue";
     final static String POOL_NODE = "/unique-id-generator/pool";
+    final static String LOCKING_TICKET = "nr-00000000000000";
+
+    static final Random random = new Random();
 
     final int resource;
     final int poolSize;
@@ -35,7 +39,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
         try {
             String placeInLine = acquireLock(zookeeper, QUEUE_NODE);
             this.resource = claimResource(zookeeper, POOL_NODE, poolSize);
-            releaseLock(zookeeper, QUEUE_NODE, placeInLine);
+            releaseTicket(zookeeper, QUEUE_NODE, placeInLine);
         } catch (KeeperException e) {
             throw new IOException(e);
         } catch (InterruptedException e) {
@@ -45,6 +49,14 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
         state = State.HAS_CLAIM;
     }
 
+    /**
+     * Claim a resource.
+     *
+     * @param zookeeper ZooKeeper connection to use.
+     * @param poolSize Size of the resource pool.
+     * @return A resource claim.
+     * @throws IOException
+     */
     public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize) throws IOException {
         return new ResourceClaim(zookeeper, poolSize);
     }
@@ -85,15 +97,11 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
      * @throws InterruptedException
      */
     static String acquireLock(ZooKeeper zookeeper, String lockNode) throws KeeperException, InterruptedException {
-        // Implementation of the queueing algorithm suggested here:
+        // Inspired by the queueing algorithm suggested here:
         // http://zookeeper.apache.org/doc/trunk/recipes.html#sc_recipes_Queues
 
         // Acquire a place in the queue by creating an ephemeral, sequential znode.
-        String path = zookeeper.create(lockNode + "/nr-", new byte[0],
-                ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-
-        String[] pathParts = path.split("/");
-        String placeInLine = pathParts[pathParts.length - 1];
+        String placeInLine = takeQueueTicket(zookeeper, lockNode);
         logger.debug("Acquiring lock, waiting in queue: {}.", placeInLine);
 
         // Wait in the queue until our turn has come.
@@ -101,20 +109,41 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
     }
 
     /**
+     * Take a ticket for the queue. If the ticket was already claimed by another process,
+     * this method retires until it succeeds.
+     *
+     * @param zookeeper ZooKeeper connection to use.
+     * @param lockNode Path to the znode representing the locking queue.
+     * @return The claimed ticket.
+     * @throws InterruptedException
+     * @throws KeeperException
+     */
+    static String takeQueueTicket(ZooKeeper zookeeper, String lockNode) throws InterruptedException, KeeperException {
+        // The ticket number includes a random component to decrease the chances of collision. Collision is handled
+        // neatly, but it saves a few actions if there is no need to retry ticket acquisition.
+        String ticket = String.format("nr-%014d-%04d", System.currentTimeMillis(), random.nextInt(10000));
+        if (grabTicket(zookeeper, lockNode, ticket)) {
+            return ticket;
+        } else {
+            return takeQueueTicket(zookeeper, lockNode);
+        }
+    }
+
+    /**
      * Release an acquired lock.
      *
      * @param zookeeper ZooKeeper connection to use.
      * @param lockNode Path to the znode representing the locking queue.
-     * @param placeInLine Name of the first node in the queue.
+     * @param ticket Name of the first node in the queue.
      * @throws KeeperException
      * @throws InterruptedException
      */
-    static void releaseLock(ZooKeeper zookeeper, String lockNode, String placeInLine)
+    static void releaseTicket(ZooKeeper zookeeper, String lockNode, String ticket)
             throws KeeperException, InterruptedException {
 
-        logger.debug("Releasing lock: {}.", placeInLine);
+        logger.debug("Releasing ticket {}.", ticket);
         try {
-            zookeeper.delete(lockNode + "/" + placeInLine, -1);
+            zookeeper.delete(lockNode + "/" + ticket, -1);
         } catch (KeeperException e) {
             if (e.code() != KeeperException.Code.NONODE) {
                 // If it the node is already gone, than that is fine, otherwise:
@@ -142,6 +171,17 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
         // The list returned is unsorted.
         Collections.sort(children);
 
+        if (children.size() == 0) {
+            // Only possible if some other process cancelled our ticket.
+            logger.warn("getChildren() returned empty list, but we created a ticket.");
+            return acquireLock(zookeeper, lockNode);
+        }
+
+        boolean lockingTicketExists = children.get(0).equals(LOCKING_TICKET);
+        if (lockingTicketExists) {
+            children.remove(0);
+        }
+
         // Where are we in the queue?
         int positionInQueue = -1;
         int i = 0;
@@ -158,15 +198,21 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
             throw new RuntimeException("Created node (" + placeInLine + ") not found in getChildren().");
         }
 
+        String placeBeforeUs;
         if (positionInQueue == 0) {
-            // Done! We hold the lowest number in the queue, the lock is ours.
-            logger.debug("Acquired lock.");
-            return placeInLine;
+            // Lowest number in the queue, go for the lock.
+            if (grabTicket(zookeeper, lockNode, LOCKING_TICKET)) {
+                releaseTicket(zookeeper, lockNode, placeInLine);
+                return LOCKING_TICKET;
+            } else {
+                placeBeforeUs = LOCKING_TICKET;
+            }
+        } else {
+            // We are not in front of the queue, so we keep an eye on the znode right in front of us. When it is
+            // deleted, that means it has reached the front of the queue, acquired the lock, did its business,
+            // and released the lock.
+            placeBeforeUs = children.get(positionInQueue - 1);
         }
-
-        // We are not in front of the queue, so we keep an eye on the znode right in front of us. When it is deleted,
-        // that means it has reached the front of the queue, acquired the lock, did its business, and released the lock.
-        String placeBeforeUs = children.get(positionInQueue - 1);
 
         final CountDownLatch latch = new CountDownLatch(1);
         Stat stat = zookeeper.exists(lockNode + "/" + placeBeforeUs, new Watcher() {
@@ -186,6 +232,34 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
         }
 
         return waitInLine(zookeeper, lockNode, placeInLine);
+    }
+
+    /**
+     * Grab a ticket in the queue.
+     *
+     * @param zookeeper ZooKeeper connection to use.
+     * @param lockNode Path to the znode representing the locking queue.
+     * @param ticket Name of the ticket to attempt to grab.
+     * @return True on success, false if the ticket was already grabbed by another process.
+     * @throws InterruptedException
+     * @throws KeeperException
+     */
+    static boolean grabTicket(ZooKeeper zookeeper, String lockNode, String ticket)
+            throws InterruptedException, KeeperException {
+        try {
+            zookeeper.create(lockNode + "/" + ticket, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+        } catch (KeeperException e) {
+            if (e.code() == KeeperException.Code.NODEEXISTS) {
+                // It is possible that two processes try to grab the exact same ticket at the same time.
+                // This is common for the locking ticket.
+                logger.debug("Failed to claim ticket {}.", ticket);
+                return false;
+            } else {
+                throw e;
+            }
+        }
+        logger.debug("Claimed ticket {}.", ticket);
+        return true;
     }
 
     /**

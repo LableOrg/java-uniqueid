@@ -2,6 +2,7 @@ package org.lable.util.uniqueid.zookeeper;
 
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.lable.util.uniqueid.GeneratorException;
@@ -55,7 +56,7 @@ public class ZooKeeperSynchronizedIT {
         final ConcurrentMap<Integer, Deque<byte[]>> result = new ConcurrentHashMap<Integer, Deque<byte[]>>(threadCount);
 
         for (int i = 0; i < threadCount; i++) {
-            final Integer number = i;
+            final Integer number = 10 + i;
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -73,7 +74,7 @@ public class ZooKeeperSynchronizedIT {
                     }
                     done.countDown();
                 }
-            }).start();
+            }, String.valueOf(number)).start();
         }
 
         ready.await();
@@ -88,5 +89,12 @@ public class ZooKeeperSynchronizedIT {
             allIDs.addAll(entry.getValue());
         }
         assertThat(allIDs.size(), is(threadCount * batchSize));
+    }
+
+    @Test
+    @Ignore
+    public void testAgainstRealQuorum() throws Exception {
+        ZooKeeperConnection.configure("zka,zkb,zkc");
+        concurrentTest();
     }
 }
