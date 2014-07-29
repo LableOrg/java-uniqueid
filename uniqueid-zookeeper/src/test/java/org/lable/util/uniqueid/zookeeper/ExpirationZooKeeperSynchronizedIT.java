@@ -37,14 +37,12 @@ public class ExpirationZooKeeperSynchronizedIT {
         SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator();
         generator.generate();
         int claim1 = generator.resourceClaim.hashCode();
-        System.out.println(claim1);
 
         // Wait for the resource claim to expire.
-        TimeUnit.MINUTES.sleep(6);
+        TimeUnit.SECONDS.sleep(40);
 
         generator.generate();
         int claim2 = generator.resourceClaim.hashCode();
-        System.out.println(claim2);
 
         // Prove that a new ResourceClaim instance was created after the first one timed out.
         assertThat(claim1, is(not(claim2)));

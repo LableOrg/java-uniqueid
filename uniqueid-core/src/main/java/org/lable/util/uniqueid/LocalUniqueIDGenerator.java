@@ -9,10 +9,10 @@ import java.util.concurrent.ConcurrentMap;
  * i.e., there is only one ID-generator using that specific combination of generator-ID and cluster-ID within the
  * confines of your computing environment at the moment you generate an ID — then the ID's returned are unique.
  */
-public class LocalUniqueIDGenerator extends UniqueIDGenerator {
+public class LocalUniqueIDGenerator extends BaseUniqueIDGenerator {
 
-    final static ConcurrentMap<String, UniqueIDGenerator> instances =
-            new ConcurrentHashMap<String, UniqueIDGenerator>();
+    final static ConcurrentMap<String, BaseUniqueIDGenerator> instances =
+            new ConcurrentHashMap<String, BaseUniqueIDGenerator>();
 
     /**
      * Create a new UniqueIDGenerator instance.
@@ -31,7 +31,7 @@ public class LocalUniqueIDGenerator extends UniqueIDGenerator {
      * @param clusterId   Cluster ID to use (0 <= n < 16).
      * @return A thread-safe UniqueIDGenerator instance.
      */
-    public synchronized static UniqueIDGenerator generatorFor(int generatorId, int clusterId) {
+    public synchronized static IDGenerator generatorFor(int generatorId, int clusterId) {
         assertParameterWithinBounds("generator-ID", 0, MAX_GENERATOR_ID, generatorId);
         assertParameterWithinBounds("cluster-ID", 0, MAX_CLUSTER_ID, clusterId);
 

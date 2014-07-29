@@ -15,12 +15,12 @@ public class LocalUniqueIDGeneratorIT {
         final int GENERATOR_ID = 42;
         final int CLUSTER_ID = 7;
         final int BATCH_SIZE = 500;
-        UniqueIDGenerator generator = LocalUniqueIDGenerator.generatorFor(GENERATOR_ID, CLUSTER_ID);
+        IDGenerator generator = LocalUniqueIDGenerator.generatorFor(GENERATOR_ID, CLUSTER_ID);
 
         Deque<byte[]> stack = generator.batch(BATCH_SIZE);
         assertThat(stack.size(), is(BATCH_SIZE));
 
-        UniqueIDGenerator.Blueprint blueprint = UniqueIDGenerator.parse(stack.pop());
+        BaseUniqueIDGenerator.Blueprint blueprint = BaseUniqueIDGenerator.parse(stack.pop());
         assertThat(blueprint.getGeneratorId(), is(GENERATOR_ID));
         assertThat(blueprint.getClusterId(), is(CLUSTER_ID));
     }

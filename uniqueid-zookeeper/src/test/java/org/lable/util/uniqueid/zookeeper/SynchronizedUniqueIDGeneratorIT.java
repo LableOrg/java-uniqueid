@@ -5,8 +5,9 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.lable.util.uniqueid.BaseUniqueIDGenerator;
 import org.lable.util.uniqueid.GeneratorException;
-import org.lable.util.uniqueid.UniqueIDGenerator;
+import org.lable.util.uniqueid.IDGenerator;
 
 import java.io.IOException;
 import java.util.*;
@@ -39,9 +40,9 @@ public class SynchronizedUniqueIDGeneratorIT {
 
     @Test
     public void simpleTest() throws Exception {
-        UniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator();
+        IDGenerator generator = SynchronizedUniqueIDGenerator.generator();
         byte[] result = generator.generate();
-        UniqueIDGenerator.Blueprint blueprint = UniqueIDGenerator.parse(result);
+        BaseUniqueIDGenerator.Blueprint blueprint = BaseUniqueIDGenerator.parse(result);
         assertThat(result.length, is(8));
         assertThat(blueprint.getClusterId(), is(CLUSTER_ID));
     }
@@ -64,7 +65,7 @@ public class SynchronizedUniqueIDGeneratorIT {
                     ready.countDown();
                     try {
                         start.await();
-                        UniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator();
+                        BaseUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator();
                         result.put(number, generator.batch(batchSize));
                     } catch (IOException e) {
                         fail();

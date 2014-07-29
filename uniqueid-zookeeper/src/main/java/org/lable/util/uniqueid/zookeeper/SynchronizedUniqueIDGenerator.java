@@ -1,14 +1,14 @@
 package org.lable.util.uniqueid.zookeeper;
 
+import org.lable.util.uniqueid.BaseUniqueIDGenerator;
 import org.lable.util.uniqueid.GeneratorException;
-import org.lable.util.uniqueid.UniqueIDGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 /**
- * A {@link org.lable.util.uniqueid.UniqueIDGenerator} that coordinates the generator ID used by other processes
+ * A {@link org.lable.util.uniqueid.BaseUniqueIDGenerator} that coordinates the generator ID used by other processes
  * using this class via the same ZooKeeper quorum by attempting to claim an available ID for itself.
  * <p/>
  * Although claims on a generator ID will be automatically relinquished after the connection to the ZooKeeper quorum
@@ -19,7 +19,7 @@ import java.io.IOException;
  * ({@link org.lable.util.uniqueid.zookeeper.ExpiringResourceClaim#DEFAULT_TIMEOUT}),
  * there is no guarantee that ID's generated have the same generator ID.
  */
-public class SynchronizedUniqueIDGenerator extends UniqueIDGenerator {
+public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
     final static Logger logger = LoggerFactory.getLogger(SynchronizedUniqueIDGenerator.class);
 
     ResourceClaim resourceClaim;
@@ -51,7 +51,7 @@ public class SynchronizedUniqueIDGenerator extends UniqueIDGenerator {
             int clusterId = ClusterID.get(ZooKeeperConnection.get());
             assertParameterWithinBounds("cluster-ID", 0, MAX_CLUSTER_ID, clusterId);
             logger.debug("Creating new instance.");
-            int poolSize = UniqueIDGenerator.MAX_GENERATOR_ID + 1;
+            int poolSize = BaseUniqueIDGenerator.MAX_GENERATOR_ID + 1;
             ResourceClaim resourceClaim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), poolSize);
             instance = new SynchronizedUniqueIDGenerator(resourceClaim, clusterId);
         }

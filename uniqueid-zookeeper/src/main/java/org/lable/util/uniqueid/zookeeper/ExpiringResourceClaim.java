@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ExpiringResourceClaim extends ResourceClaim {
 
-    public final static long DEFAULT_TIMEOUT = TimeUnit.MINUTES.toMillis(5);
+    public final static long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
     ExpiringResourceClaim(ZooKeeper zookeeper, int poolSize, long timeout) throws IOException {
         super(zookeeper, poolSize);

@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
  * i.e., there is only one ID-generator using that specific combination of generator-ID and cluster-ID within the
  * confines of your computing environment at the moment you generate an ID — then the ID's returned are unique.
  */
-public abstract class UniqueIDGenerator {
+public abstract class BaseUniqueIDGenerator implements IDGenerator {
     /*
       The eight byte ID is composed as follows:
       TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTSSSSSS ......GG GGGGCCCC
@@ -58,19 +58,15 @@ public abstract class UniqueIDGenerator {
      * @param generatorId Generator ID to use (0 <= n < 64).
      * @param clusterId   Cluster ID to use (0 <= n < 16).
      */
-    protected UniqueIDGenerator(int generatorId, int clusterId) {
+    protected BaseUniqueIDGenerator(int generatorId, int clusterId) {
         this.generatorId = generatorId;
         this.clusterId = clusterId;
     }
 
     /**
-     * Generate a fresh ID.
-     *
-     * @return The generated ID.
-     * @throws GeneratorException              Thrown when an ID could not be generated. In practice,
-     *                                         this exception is usually only thrown by the more complex subclasses of
-     *                                         {@link org.lable.util.uniqueid.UniqueIDGenerator}.
+     * {@inheritDoc}
      */
+    @Override
     public synchronized byte[] generate() throws GeneratorException {
 
         long now = System.currentTimeMillis();
@@ -95,14 +91,9 @@ public abstract class UniqueIDGenerator {
     }
 
     /**
-     * Generate a batch of ID's. This is the preferred way of generating ID's when you expect to use a lot of ID's.
-     *
-     * @param size How many ID's to generate.
-     * @return A stack of ID's.
-     * @throws GeneratorException              Thrown when an ID could not be generated. In practice,
-     *                                         this exception is usually only thrown by the more complex subclasses of
-     *                                         {@link org.lable.util.uniqueid.UniqueIDGenerator}.
+     * {@inheritDoc}
      */
+    @Override
     public Deque<byte[]> batch(int size) throws GeneratorException {
         Deque<byte[]> stack = new ArrayDeque<byte[]>();
         for (int i = 0; i < size; i++) {
@@ -159,7 +150,7 @@ public abstract class UniqueIDGenerator {
     }
 
     /**
-     * Decompose a generated ID into its {@link UniqueIDGenerator.Blueprint}.
+     * Decompose a generated ID into its {@link BaseUniqueIDGenerator.Blueprint}.
      *
      * @param id Eight byte ID to parse.
      * @return A blueprint containing the four ID components.
@@ -208,8 +199,8 @@ public abstract class UniqueIDGenerator {
          * @param sequence    Sequence counter.
          * @param generatorId Generator ID.
          * @param clusterId   Cluster ID.
-         * @see org.lable.util.uniqueid.UniqueIDGenerator#MAX_CLUSTER_ID
-         * @see org.lable.util.uniqueid.UniqueIDGenerator#MAX_GENERATOR_ID
+         * @see BaseUniqueIDGenerator#MAX_CLUSTER_ID
+         * @see BaseUniqueIDGenerator#MAX_GENERATOR_ID
          */
         public Blueprint(long timestamp, int sequence, int generatorId, int clusterId) {
             assertParameterWithinBounds("timestamp", 0, MAX_TIMESTAMP, timestamp);
@@ -228,7 +219,7 @@ public abstract class UniqueIDGenerator {
          * @return The ID that corresponds to this Blueprint.
          */
         public byte[] getID() {
-            return UniqueIDGenerator.mangleBytes(this);
+            return BaseUniqueIDGenerator.mangleBytes(this);
         }
 
         /**
