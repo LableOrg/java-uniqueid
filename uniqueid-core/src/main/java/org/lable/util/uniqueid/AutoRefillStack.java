@@ -7,31 +7,35 @@ import java.util.NoSuchElementException;
 /**
  * A caching wrapper around an {@link org.lable.util.uniqueid.IDGenerator} instance.
  * <p/>
- * This class will cache a bunch of generated ID's and automatically refill the stack when it runs out. By letting
+ * This class will cache a bunch of generated IDs and automatically refill the stack when it runs out. By letting
  * this class handle the caching, calling classes can simply call {@link #generate()} whenever a new ID is needed,
  * without having to worry about any performance hit you might see when calling
  * {@link IDGenerator#generate()} repeatedly from a time-consuming loop.
  */
 public class AutoRefillStack implements IDGenerator{
 
-    int batchSize = 500;
+    static final int DEFAULT_BATCH_SIZE = 500;
+
+    final int batchSize;
     final IDGenerator generator;
     final Deque<byte[]> idStack = new ArrayDeque<byte[]>();
 
     /**
      * Create a new AutoRefillStack.
+     * <p/>
+     * It's internal cache will be set to 500 IDs.
      *
      * @param generator The IDGenerator to wrap.
      */
     public AutoRefillStack(IDGenerator generator) {
-        this.generator = generator;
+        this(generator, DEFAULT_BATCH_SIZE);
     }
 
     /**
      * Create a new AutoRefillStack, with a specific batch size.
      *
      * @param generator The IDGenerator to wrap.
-     * @param batchSize The amount of ID's to cache.
+     * @param batchSize The amount of IDs to cache.
      */
     public AutoRefillStack(IDGenerator generator, int batchSize) {
         this.batchSize = batchSize;

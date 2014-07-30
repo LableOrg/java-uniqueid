@@ -8,6 +8,7 @@ import org.junit.Test;
 import org.lable.util.uniqueid.BaseUniqueIDGenerator;
 import org.lable.util.uniqueid.GeneratorException;
 import org.lable.util.uniqueid.IDGenerator;
+import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
 import java.util.*;
@@ -24,6 +25,9 @@ import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareEm
 
 public class SynchronizedUniqueIDGeneratorIT {
 
+    String zookeeperQuorum;
+    String znode = "/unique-id-generator";
+
     @Rule
     public ZooKeeperInstance zkInstance = new ZooKeeperInstance();
 
@@ -31,16 +35,17 @@ public class SynchronizedUniqueIDGeneratorIT {
 
     @Before
     public void before() throws Exception {
-        ZooKeeperConnection.configure(zkInstance.getQuorumAddresses());
+        zookeeperQuorum = zkInstance.getQuorumAddresses();
+        ZooKeeperConnection.configure(zookeeperQuorum);
         ZooKeeperConnection.reset();
         ZooKeeper zookeeper = ZooKeeperConnection.get();
-        prepareEmptyQueueAndPool(zookeeper);
-        prepareClusterID(zookeeper, CLUSTER_ID);
+        prepareEmptyQueueAndPool(zookeeper, znode);
+        prepareClusterID(zookeeper, znode, CLUSTER_ID);
     }
 
     @Test
     public void simpleTest() throws Exception {
-        IDGenerator generator = SynchronizedUniqueIDGenerator.generator();
+        IDGenerator generator = SynchronizedUniqueIDGenerator.generator(zookeeperQuorum, znode);
         byte[] result = generator.generate();
         BaseUniqueIDGenerator.Blueprint blueprint = BaseUniqueIDGenerator.parse(result);
         assertThat(result.length, is(8));
@@ -65,7 +70,8 @@ public class SynchronizedUniqueIDGeneratorIT {
                     ready.countDown();
                     try {
                         start.await();
-                        BaseUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator();
+                        BaseUniqueIDGenerator generator =
+                                SynchronizedUniqueIDGenerator.generator(zookeeperQuorum, znode);
                         result.put(number, generator.batch(batchSize));
                     } catch (IOException e) {
                         fail();
@@ -101,8 +107,8 @@ public class SynchronizedUniqueIDGeneratorIT {
     }
 
     @Test
-    public void relinquisResourceClaimTest() throws Exception {
-        SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator();
+    public void relinquishResourceClaimTest() throws Exception {
+        SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator(zookeeperQuorum, znode);
         generator.generate();
         int claim1 = generator.resourceClaim.hashCode();
 

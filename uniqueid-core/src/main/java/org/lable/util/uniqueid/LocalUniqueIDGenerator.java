@@ -4,10 +4,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Generate short, possibly unique ID's based on the current timestamp. Whether the ID's are truly unique or not
+ * Generate short, possibly unique IDs based on the current timestamp. Whether the IDs are truly unique or not
  * depends on the scope of its use. If the combination of generator-ID and cluster-ID passed to this class is unique —
  * i.e., there is only one ID-generator using that specific combination of generator-ID and cluster-ID within the
- * confines of your computing environment at the moment you generate an ID — then the ID's returned are unique.
+ * confines of your computing environment at the moment you generate an ID — then the IDs returned are unique.
  */
 public class LocalUniqueIDGenerator extends BaseUniqueIDGenerator {
 

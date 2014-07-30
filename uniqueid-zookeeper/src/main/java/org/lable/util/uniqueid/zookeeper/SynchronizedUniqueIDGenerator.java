@@ -2,10 +2,13 @@ package org.lable.util.uniqueid.zookeeper;
 
 import org.lable.util.uniqueid.BaseUniqueIDGenerator;
 import org.lable.util.uniqueid.GeneratorException;
+import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * A {@link org.lable.util.uniqueid.BaseUniqueIDGenerator} that coordinates the generator ID used by other processes
@@ -13,11 +16,11 @@ import java.io.IOException;
  * <p/>
  * Although claims on a generator ID will be automatically relinquished after the connection to the ZooKeeper quorum
  * is lost, instances of this class should be explicitly closed after use, if you do not expect to generate anymore
- * ID's at that time.
+ * IDs at that time.
  * <p/>
- * Because claimed generator ID's are automatically returned to the pool after a set time
+ * Because claimed generator IDs are automatically returned to the pool after a set time
  * ({@link org.lable.util.uniqueid.zookeeper.ExpiringResourceClaim#DEFAULT_TIMEOUT}),
- * there is no guarantee that ID's generated have the same generator ID.
+ * there is no guarantee that IDs generated have the same generator ID.
  */
 public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
     final static Logger logger = LoggerFactory.getLogger(SynchronizedUniqueIDGenerator.class);
@@ -25,7 +28,8 @@ public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
     ResourceClaim resourceClaim;
     final int poolSize;
 
-    static SynchronizedUniqueIDGenerator instance = null;
+    static ConcurrentMap<String, SynchronizedUniqueIDGenerator> instances =
+            new ConcurrentHashMap<String, SynchronizedUniqueIDGenerator>();
 
     /**
      * Create a new SynchronizedUniqueIDGenerator instance.
@@ -42,20 +46,27 @@ public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
     /**
      * Get the synchronized ID generator instance.
      *
+     * @param zookeeperQuorum Addresses of the ZooKeeper quorum to connect to.
+     * @param znode Base-path of the resource pool in ZooKeeper.
+     *
      * @return An instance of this class.
      * @throws IOException Thrown when something went wrong trying to find the cluster ID or trying to claim a
      *                     generator ID.
      */
-    public static synchronized SynchronizedUniqueIDGenerator generator() throws IOException {
-        if (instance == null) {
-            int clusterId = ClusterID.get(ZooKeeperConnection.get());
+    public static synchronized SynchronizedUniqueIDGenerator generator(String zookeeperQuorum, String znode)
+            throws IOException {
+
+        String instanceKey = zookeeperQuorum + "@" + znode;
+        if (!instances.containsKey(instanceKey)) {
+            ZooKeeperConnection.configure(zookeeperQuorum);
+            int clusterId = ClusterID.get(ZooKeeperConnection.get(), znode);
             assertParameterWithinBounds("cluster-ID", 0, MAX_CLUSTER_ID, clusterId);
             logger.debug("Creating new instance.");
             int poolSize = BaseUniqueIDGenerator.MAX_GENERATOR_ID + 1;
-            ResourceClaim resourceClaim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), poolSize);
-            instance = new SynchronizedUniqueIDGenerator(resourceClaim, clusterId);
+            ResourceClaim resourceClaim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), poolSize, znode);
+            instances.putIfAbsent(instanceKey, new SynchronizedUniqueIDGenerator(resourceClaim, clusterId));
         }
-        return instance;
+        return instances.get(instanceKey);
     }
 
     /**
@@ -67,9 +78,10 @@ public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
             generatorId = resourceClaim.get();
         } catch (IllegalStateException e) {
             // Claim expired?
+            String znode = resourceClaim.getConfiguredZNode();
             resourceClaim.close();
             try {
-                resourceClaim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), poolSize);
+                resourceClaim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), poolSize, znode);
             } catch (IOException ioe) {
                 throw new GeneratorException(ioe);
             }

@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 
 import java.util.concurrent.TimeUnit;
@@ -18,6 +19,10 @@ import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareEm
 
 @Category(Slow.class)
 public class ExpirationZooKeeperSynchronizedIT {
+
+    String zookeeperQuorum;
+    String znode = "/unique-id-generator";
+
     @Rule
     public ZooKeeperInstance zkInstance = new ZooKeeperInstance();
 
@@ -25,16 +30,17 @@ public class ExpirationZooKeeperSynchronizedIT {
 
     @Before
     public void before() throws Exception {
-        ZooKeeperConnection.configure(zkInstance.getQuorumAddresses());
+        zookeeperQuorum = zkInstance.getQuorumAddresses();
+        ZooKeeperConnection.configure(zookeeperQuorum);
         ZooKeeperConnection.reset();
         ZooKeeper zookeeper = ZooKeeperConnection.get();
-        prepareEmptyQueueAndPool(zookeeper);
-        prepareClusterID(zookeeper, CLUSTER_ID);
+        prepareEmptyQueueAndPool(zookeeper, znode);
+        prepareClusterID(zookeeper, znode, CLUSTER_ID);
     }
 
     @Test
     public void testExpirationOfResourceClaimTest() throws Exception {
-        SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator();
+        SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator(zookeeperQuorum, znode);
         generator.generate();
         int claim1 = generator.resourceClaim.hashCode();
 

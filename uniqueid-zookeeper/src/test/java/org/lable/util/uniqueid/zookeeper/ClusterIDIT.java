@@ -1,11 +1,9 @@
 package org.lable.util.uniqueid.zookeeper;
 
-
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.Rule;
 import org.junit.Test;
-
-import java.io.IOException;
+import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -21,17 +19,21 @@ public class ClusterIDIT {
     @Test
     public void getClusterIDTest() throws Exception {
         ZooKeeper zookeeper = zkInstance.getZookeeperConnection();
-        prepareClusterID(zookeeper, CLUSTER_ID);
+        prepareClusterID(zookeeper, "/some-path", CLUSTER_ID);
 
-        int id = ClusterID.get(zookeeper);
+        int id = ClusterID.get(zookeeper, "/some-path");
         assertThat(id, is(CLUSTER_ID));
 
         ZooKeeperConnection.reset();
     }
 
-    @Test(expected = IOException.class)
-    public void failToGetClusterIDTest() throws Exception {
-        // Should fail because the /unique-id-generator/cluster-id znode is missing.
-        ClusterID.get(zkInstance.getZookeeperConnection());
+    @Test
+    public void getClusterIDDefaultTest() throws Exception {
+        ZooKeeper zookeeper = zkInstance.getZookeeperConnection();
+
+        int id = ClusterID.get(zookeeper, "/some-path");
+        assertThat(id, is(ClusterID.DEFAULT_CLUSTER_ID));
+
+        ZooKeeperConnection.reset();
     }
 }

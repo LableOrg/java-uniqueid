@@ -15,22 +15,23 @@ public class ExpiringResourceClaim extends ResourceClaim {
 
     public final static long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
-    ExpiringResourceClaim(ZooKeeper zookeeper, int poolSize, long timeout) throws IOException {
-        super(zookeeper, poolSize);
+    ExpiringResourceClaim(ZooKeeper zookeeper, int poolSize, String znode, long timeout) throws IOException {
+        super(zookeeper, poolSize, znode);
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
             @Override
-            public void run(){
+            public void run() {
                 close();
             }
         }, timeout);
     }
 
-    public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize) throws IOException {
-        return claim(zookeeper, poolSize, DEFAULT_TIMEOUT);
+    public static ResourceClaim claim(ZooKeeper zookeeper, String znode, int poolSize) throws IOException {
+        return claim(zookeeper, poolSize, znode, DEFAULT_TIMEOUT);
     }
 
-    public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize, long timeout) throws IOException {
-        return new ExpiringResourceClaim(zookeeper, poolSize, timeout);
+    public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize, String znode, long timeout)
+            throws IOException {
+        return new ExpiringResourceClaim(zookeeper, poolSize, znode, timeout);
     }
 }

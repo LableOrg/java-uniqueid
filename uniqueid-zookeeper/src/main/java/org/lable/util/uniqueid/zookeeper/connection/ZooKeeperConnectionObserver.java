@@ -1,4 +1,4 @@
-package org.lable.util.uniqueid.zookeeper;
+package org.lable.util.uniqueid.zookeeper.connection;
 
 /**
  * ?

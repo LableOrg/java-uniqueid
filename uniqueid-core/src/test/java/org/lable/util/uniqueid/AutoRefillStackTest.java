@@ -31,7 +31,7 @@ public class AutoRefillStackTest {
 
         AutoRefillStack stack = new AutoRefillStack(generator, 10);
 
-        // Grab 9 ID's.
+        // Grab 9 IDs.
         Deque<byte[]> deck = stack.batch(9);
         assertThat(deck.size(), is(9));
 
@@ -44,5 +44,28 @@ public class AutoRefillStackTest {
 
         verify(generator, times(2)).batch(10);
         verifyNoMoreInteractions(generator);
+    }
+
+    @Test
+    public void defaultConstructorTest() throws GeneratorException {
+        IDGenerator generator = mock(IDGenerator.class);
+        Deque<byte[]> dummyDeck = new ArrayDeque<byte[]>(AutoRefillStack.DEFAULT_BATCH_SIZE);
+        for (int i = 0; i < AutoRefillStack.DEFAULT_BATCH_SIZE; i++) {
+            dummyDeck.add(Long.toHexString(random.nextLong()).getBytes());
+        }
+        when(generator.batch(AutoRefillStack.DEFAULT_BATCH_SIZE)).thenReturn(dummyDeck);
+
+        AutoRefillStack stack = new AutoRefillStack(generator);
+
+        // Call batch with a value that will cause it to return an empty list.
+        // The wrapped generator should not be called.
+        Deque<byte[]> ids = stack.batch(-1);
+        assertThat(ids.size(), is(0));
+        verify(generator, never()).batch(anyInt());
+
+        // Trigger the wrapper to load up a fresh batch of IDs.
+        stack.generate();
+        assertThat(stack.idStack.size(), is(AutoRefillStack.DEFAULT_BATCH_SIZE - 1));
+        verify(generator).batch(AutoRefillStack.DEFAULT_BATCH_SIZE);
     }
 }

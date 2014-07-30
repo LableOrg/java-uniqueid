@@ -3,7 +3,7 @@ package org.lable.util.uniqueid;
 import java.util.Deque;
 
 /**
- * Generate short, possibly unique ID's.
+ * Generate short, possibly unique IDs.
  */
 public interface IDGenerator {
     /**
@@ -17,12 +17,12 @@ public interface IDGenerator {
     public byte[] generate() throws GeneratorException;
 
     /**
-     * Generate a batch of ID's. This is the preferred way of generating ID's when you expect to use more than a few
-     * ID's.
+     * Generate a batch of IDs. This is the preferred way of generating IDs when you expect to use more than a few
+     * IDs.
      *
-     * @param size How many ID's to generate, implementing classes may decide to limit the maximum number of ID's
+     * @param size How many IDs to generate, implementing classes may decide to limit the maximum number of IDs
      *             generated at a time.
-     * @return A stack of ID's, containing {@code size} or fewer ID's.
+     * @return A stack of IDs, containing {@code size} or fewer IDs.
      * @throws GeneratorException Thrown when an ID could not be generated. In practice,
      *                            this exception is usually only thrown by the more complex implementations of
      *                            {@link org.lable.util.uniqueid.IDGenerator}.

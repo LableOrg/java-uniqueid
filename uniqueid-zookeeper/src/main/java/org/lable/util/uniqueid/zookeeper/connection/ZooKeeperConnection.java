@@ -1,4 +1,4 @@
-package org.lable.util.uniqueid.zookeeper;
+package org.lable.util.uniqueid.zookeeper.connection;
 
 
 import org.apache.zookeeper.WatchedEvent;
@@ -11,7 +11,8 @@ import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Singleton for a ZooKeeper connection object instance.
@@ -59,7 +60,7 @@ public enum ZooKeeperConnection {
         ZooKeeper zookeeper;
 
         // Connect to the quorum and wait for the successful connection callback.;
-        zookeeper = new ZooKeeper(quorumAddresses, (int) TimeUnit.SECONDS.toMillis(10), new Watcher() {
+        zookeeper = new ZooKeeper(quorumAddresses, (int) SECONDS.toMillis(10), new Watcher() {
             @Override
             public void process(WatchedEvent watchedEvent) {
                 if (watchedEvent.getState() == Event.KeeperState.SyncConnected) {
@@ -71,7 +72,7 @@ public enum ZooKeeperConnection {
 
         boolean successfullyConnected = false;
         try {
-            successfullyConnected = latch.await(11, TimeUnit.SECONDS);
+            successfullyConnected = latch.await(11, SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -99,7 +100,7 @@ public enum ZooKeeperConnection {
      * This method should be called when the connection to the ZooKeeper is expired, so a subsequent call to
      * {@link #get()} will establish a new connection.
      */
-    static void reset() {
+    public static void reset() {
         INSTANCE.zookeeper = null;
     }
 

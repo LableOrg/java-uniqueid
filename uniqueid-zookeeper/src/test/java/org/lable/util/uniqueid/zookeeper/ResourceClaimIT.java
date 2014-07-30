@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -25,21 +26,25 @@ import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareEm
 
 public class ResourceClaimIT {
 
+    String zookeeperQuorum;
+    String znode = "/unique-id-generator";
+
     @Rule
     public ZooKeeperInstance zkInstance = new ZooKeeperInstance();
 
     @Before
     public void before() throws Exception {
-        ZooKeeperConnection.configure(zkInstance.getQuorumAddresses());
+        zookeeperQuorum = zkInstance.getQuorumAddresses();
+        ZooKeeperConnection.configure(zookeeperQuorum);
         ZooKeeper zookeeper = zkInstance.getZookeeperConnection();
-        prepareClusterID(zookeeper, 3);
-        prepareEmptyQueueAndPool(zookeeper);
+        prepareClusterID(zookeeper, znode, 3);
+        prepareEmptyQueueAndPool(zookeeper, znode);
         ZooKeeperConnection.reset();
     }
 
     @Test
     public void claimTest() throws Exception {
-        ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), 2);
+        ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), 2, znode);
         int resource = claim.get();
         assertThat(resource, is(both(greaterThanOrEqualTo(0)).and(lessThan(2))));
     }
@@ -62,7 +67,7 @@ public class ResourceClaimIT {
                     ready.countDown();
                     try {
                         start.await();
-                        ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize);
+                        ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize, znode);
                         result.put(number, claim.get());
                     } catch (IOException e) {
                         fail();
@@ -103,7 +108,7 @@ public class ResourceClaimIT {
                     ready.countDown();
                     try {
                         start.await();
-                        ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize);
+                        ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize, znode);
                         result.put(number, claim.get());
                         claim.close();
                     } catch (IOException e) {

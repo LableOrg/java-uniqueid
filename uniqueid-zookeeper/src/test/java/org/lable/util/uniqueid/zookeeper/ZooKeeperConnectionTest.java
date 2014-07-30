@@ -3,6 +3,7 @@ package org.lable.util.uniqueid.zookeeper;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
 

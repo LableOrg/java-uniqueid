@@ -24,7 +24,7 @@ public class UniqueIDGeneratorThreadSafetyIT {
         final int iterationCount = 10000;
         final CountDownLatch latch = new CountDownLatch(threadCount);
 
-        // Generate ID's for the same generator-ID and cluster-ID in multiple threads.
+        // Generate IDs for the same generator-ID and cluster-ID in multiple threads.
         // Collision of IDs is almost guaranteed if the generator doesn't handle multi-threading gracefully.
 
         for (int i = 0; i < threadCount; i++) {
@@ -67,7 +67,7 @@ public class UniqueIDGeneratorThreadSafetyIT {
         final int iterationCount = 10000;
         final CountDownLatch latch = new CountDownLatch(profiles.length);
 
-        // Generate ID's for different generator-IDs and cluster-IDs in multiple threads.
+        // Generate IDs for different generator-IDs and cluster-IDs in multiple threads.
         // Collision of IDs is almost guaranteed if the generator doesn't handle multi-threading gracefully.
 
         for (final int[] profile : profiles) {

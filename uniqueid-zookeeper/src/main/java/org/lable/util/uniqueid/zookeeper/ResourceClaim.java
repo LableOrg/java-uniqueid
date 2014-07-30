@@ -2,6 +2,8 @@ package org.lable.util.uniqueid.zookeeper;
 
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
+import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnection;
+import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnectionObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,6 +13,10 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
+import static org.lable.util.uniqueid.zookeeper.ZooKeeperHelper.create;
+import static org.lable.util.uniqueid.zookeeper.ZooKeeperHelper.createIfNotThere;
+import static org.lable.util.uniqueid.zookeeper.ZooKeeperHelper.mkdirp;
+
 /**
  * Represents a claim on resource (represented by an int) from a finite pool of resources negotiated through a
  * queueing protocol facilitated by a ZooKeeper-quorum.
@@ -18,10 +24,11 @@ import java.util.concurrent.CountDownLatch;
 public class ResourceClaim implements ZooKeeperConnectionObserver {
     final static Logger logger = LoggerFactory.getLogger(ResourceClaim.class);
 
-    final static String QUEUE_NODE = "/unique-id-generator/queue";
-    final static String POOL_NODE = "/unique-id-generator/pool";
-    final static String LOCKING_TICKET = "nr-00000000000000";
+    static String ZNODE;
+    static String QUEUE_NODE;
+    static String POOL_NODE;
 
+    final static String LOCKING_TICKET = "nr-00000000000000";
     static final Random random = new Random();
 
     final int resource;
@@ -29,14 +36,20 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
     final ZooKeeper zookeeper;
     protected State state = State.UNCLAIMED;
 
-    ResourceClaim(ZooKeeper zookeeper, int poolSize) throws IOException {
+    ResourceClaim(ZooKeeper zookeeper, int poolSize, String znode) throws IOException {
+        ZNODE = znode;
+        QUEUE_NODE = znode + "/queue";
+        POOL_NODE = znode + "/pool";
         ZooKeeperConnection.registerObserver(this);
         this.poolSize = poolSize;
         this.zookeeper = zookeeper;
+
         if (zookeeper.getState() != ZooKeeper.States.CONNECTED) {
-            throw new IOException("Not connected to ZooKeeper quorum");
+            throw new IOException("Not connected to ZooKeeper quorum.");
         }
+
         try {
+            ensureRequiredZnodesExist(zookeeper, znode);
             String placeInLine = acquireLock(zookeeper, QUEUE_NODE);
             this.resource = claimResource(zookeeper, POOL_NODE, poolSize);
             releaseTicket(zookeeper, QUEUE_NODE, placeInLine);
@@ -50,6 +63,20 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
     }
 
     /**
+     * Make sure the required znodes are present on the quorum.
+     *
+     * @param zookeeper ZooKeeper connection to use.
+     * @param znode Base-path for our znodes.
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    void ensureRequiredZnodesExist(ZooKeeper zookeeper, String znode) throws KeeperException, InterruptedException {
+        mkdirp(zookeeper, znode);
+        createIfNotThere(zookeeper, QUEUE_NODE);
+        createIfNotThere(zookeeper, POOL_NODE);
+    }
+
+    /**
      * Claim a resource.
      *
      * @param zookeeper ZooKeeper connection to use.
@@ -57,8 +84,8 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
      * @return A resource claim.
      * @throws IOException
      */
-    public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize) throws IOException {
-        return new ResourceClaim(zookeeper, poolSize);
+    public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize, String znode) throws IOException {
+        return new ResourceClaim(zookeeper, poolSize, znode);
     }
 
     /**
@@ -332,6 +359,10 @@ public class ResourceClaim implements ZooKeeperConnectionObserver {
         } catch (KeeperException e) {
             logger.error("Failed to remove resource claim node {}/{}", poolNode, resource);
         }
+    }
+
+    public String getConfiguredZNode() {
+        return ZNODE;
     }
 
     @Override

@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +21,9 @@ import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareEm
 
 public class ExpiringResourceClaimIT {
 
+    String zookeeperQuorum;
+    String znode = "/unique-id-generator";
+
     @Rule
     public ZooKeeperInstance zkInstance = new ZooKeeperInstance();
 
@@ -30,14 +34,15 @@ public class ExpiringResourceClaimIT {
     public void before() throws IOException, KeeperException, InterruptedException {
         ZooKeeperConnection.configure(zkInstance.getQuorumAddresses());
         ZooKeeper zookeeper = ZooKeeperConnection.get();
-        prepareEmptyQueueAndPool(zookeeper);
-        prepareClusterID(zookeeper, 0);
+        prepareEmptyQueueAndPool(zookeeper, znode);
+        prepareClusterID(zookeeper, znode, 0);
         ZooKeeperConnection.reset();
     }
 
     @Test
     public void expirationTest() throws IOException, InterruptedException {
-        ResourceClaim claim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), 64, TimeUnit.SECONDS.toMillis(2));
+        ResourceClaim claim = ExpiringResourceClaim.claim(
+                ZooKeeperConnection.get(), 64, znode, TimeUnit.SECONDS.toMillis(2));
         int resource = claim.get();
         assertThat(claim.state, is(ResourceClaim.State.HAS_CLAIM));
         assertThat(resource, is(both(greaterThanOrEqualTo(0)).and(lessThan(64))));
