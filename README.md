@@ -59,11 +59,11 @@ will be used. To use a different cluster ID, set the content of this znode to on
 If you are using `zkcli`:
 
 ```
-create /unique-id-generator/cl "1"
+create /unique-id-generator/cluster-id 1
 ```
 Or if the znode already exists:
 ```
-set /unique-id-generator/cl "1"
+set /unique-id-generator/cluster-id 1
 ```
 
 ### Using the generator
