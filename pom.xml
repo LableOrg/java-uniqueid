@@ -28,7 +28,7 @@
     <zookeeper.version>3.4.5</zookeeper.version>
     <powermock.version>1.5.1</powermock.version>
     <junit.version>4.11</junit.version>
-    <scm.url>scm:git:ssh://git@stash.lable.org:7999/LABLE/uniqueid.git</scm.url>
+    <scm.url>scm:git:git@git.lable.org:lable/unique-id-generator.git</scm.url>
   </properties>
 
   <scm>
