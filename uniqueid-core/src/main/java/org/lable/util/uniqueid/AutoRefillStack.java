@@ -12,7 +12,7 @@ import java.util.NoSuchElementException;
  * without having to worry about any performance hit you might see when calling
  * {@link IDGenerator#generate()} repeatedly from a time-consuming loop.
  */
-public class AutoRefillStack implements IDGenerator{
+public class AutoRefillStack implements IDGenerator {
 
     static final int DEFAULT_BATCH_SIZE = 500;
 
