@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class OnePerMillisecondDecorator implements IDGenerator {
     final IDGenerator generator;
     long previousInvocation = 0;
+    byte[] previous = null;
 
     protected OnePerMillisecondDecorator(IDGenerator generator) {
         this.generator = generator;
@@ -37,17 +38,36 @@ public class OnePerMillisecondDecorator implements IDGenerator {
 
     @Override
     public byte[] generate() throws GeneratorException {
+        // Wait a millisecond (or two) until the current timestamp is not the same as the next.
+        // Because the first byte is the last byte (reversed) of the current timestamp, the timestamps
+        // have to differ to guarantee a different byte there.
         long now = System.currentTimeMillis();
         while (previousInvocation == now) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(1);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            sleepAMillisecond();
             now = System.currentTimeMillis();
         }
         previousInvocation = now;
-        return generator.generate();
+
+        // The above trick fails in rare cases, so perform an additional check to guarantee the desired
+        // result.
+        byte[] id = generator.generate();
+        if (previous != null) {
+            while (previous[0] == id[0]) {
+                sleepAMillisecond();
+                id = generator.generate();
+            }
+        }
+
+        previous = id;
+        return id;
+    }
+
+    private void sleepAMillisecond() {
+        try {
+            TimeUnit.MILLISECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override
