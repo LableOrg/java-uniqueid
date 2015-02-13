@@ -20,26 +20,30 @@ public class AutoRefillStack implements IDGenerator {
     final IDGenerator generator;
     final Deque<byte[]> idStack = new ArrayDeque<byte[]>();
 
-    /**
-     * Create a new AutoRefillStack.
-     * <p/>
-     * It's internal cache will be set to 500 IDs.
-     *
-     * @param generator The IDGenerator to wrap.
-     */
-    public AutoRefillStack(IDGenerator generator) {
-        this(generator, DEFAULT_BATCH_SIZE);
+    protected AutoRefillStack(IDGenerator generator, int batchSize) {
+        this.batchSize = batchSize;
+        this.generator = generator;
     }
 
     /**
-     * Create a new AutoRefillStack, with a specific batch size.
+     * Wrap an {@link IDGenerator} in an AutoRefillStack, with a default batch-size.
      *
-     * @param generator The IDGenerator to wrap.
-     * @param batchSize The amount of IDs to cache.
+     * @param generator Generator to decorate.
+     * @return The decorated generator.
      */
-    public AutoRefillStack(IDGenerator generator, int batchSize) {
-        this.batchSize = batchSize;
-        this.generator = generator;
+    public static IDGenerator decorate(IDGenerator generator) {
+        return new AutoRefillStack(generator, DEFAULT_BATCH_SIZE);
+    }
+
+    /**
+     * Wrap an {@link IDGenerator} in an AutoRefillStack, with a specific batch size.
+     *
+     * @param generator Generator to decorate.
+     * @param batchSize The amount of IDs to cache.
+     * @return The decorated generator.
+     */
+    public static IDGenerator decorate(IDGenerator generator, int batchSize) {
+        return new AutoRefillStack(generator, batchSize);
     }
 
     /**

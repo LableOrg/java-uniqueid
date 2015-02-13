@@ -16,7 +16,7 @@ public class OnePerMillisecondDecoratorIT {
         final int BATCH_SIZE = 500;
 
         IDGenerator generator = LocalUniqueIDGenerator.generatorFor(GENERATOR_ID, CLUSTER_ID);
-        IDGenerator decorator = new OnePerMillisecondDecorator(generator);
+        IDGenerator decorator = OnePerMillisecondDecorator.decorate(generator);
 
         Deque<byte[]> stack = decorator.batch(BATCH_SIZE);
         assertThat(stack.size(), is(BATCH_SIZE));

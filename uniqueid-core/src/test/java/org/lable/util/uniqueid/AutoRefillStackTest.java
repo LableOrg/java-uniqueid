@@ -29,7 +29,7 @@ public class AutoRefillStackTest {
         }
         when(generator.batch(10)).thenReturn(deck1).thenReturn(deck2);
 
-        AutoRefillStack stack = new AutoRefillStack(generator, 10);
+        IDGenerator stack = AutoRefillStack.decorate(generator, 10);
 
         // Grab 9 IDs.
         Deque<byte[]> deck = stack.batch(9);
@@ -55,7 +55,7 @@ public class AutoRefillStackTest {
         }
         when(generator.batch(AutoRefillStack.DEFAULT_BATCH_SIZE)).thenReturn(dummyDeck);
 
-        AutoRefillStack stack = new AutoRefillStack(generator);
+        IDGenerator stack = AutoRefillStack.decorate(generator);
 
         // Call batch with a value that will cause it to return an empty list.
         // The wrapped generator should not be called.
@@ -65,7 +65,7 @@ public class AutoRefillStackTest {
 
         // Trigger the wrapper to load up a fresh batch of IDs.
         stack.generate();
-        assertThat(stack.idStack.size(), is(AutoRefillStack.DEFAULT_BATCH_SIZE - 1));
+        assertThat(((AutoRefillStack) stack).idStack.size(), is(AutoRefillStack.DEFAULT_BATCH_SIZE - 1));
         verify(generator).batch(AutoRefillStack.DEFAULT_BATCH_SIZE);
     }
 }

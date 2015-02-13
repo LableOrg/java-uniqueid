@@ -21,13 +21,18 @@ public class OnePerMillisecondDecorator implements IDGenerator {
     final IDGenerator generator;
     long previousInvocation = 0;
 
+    protected OnePerMillisecondDecorator(IDGenerator generator) {
+        this.generator = generator;
+    }
+
     /**
-     * Create a new OnePerMillisecondDecorator.
+     * Wrap an {@link IDGenerator} in a OnePerMillisecondDecorator.
      *
      * @param generator Generator to decorate.
+     * @return The decorated generator.
      */
-    public OnePerMillisecondDecorator(IDGenerator generator) {
-        this.generator = generator;
+    public static IDGenerator decorate(IDGenerator generator) {
+        return new OnePerMillisecondDecorator(generator);
     }
 
     @Override
