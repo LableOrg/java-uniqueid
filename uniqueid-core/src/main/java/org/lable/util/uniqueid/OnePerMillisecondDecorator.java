@@ -47,12 +47,6 @@ public class OnePerMillisecondDecorator implements IDGenerator {
             now = System.currentTimeMillis();
         }
         previousInvocation = now;
-
-        try {
-            TimeUnit.MILLISECONDS.sleep(1);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
         return generator.generate();
     }
 
