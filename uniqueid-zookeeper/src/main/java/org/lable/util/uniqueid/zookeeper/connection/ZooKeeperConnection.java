@@ -27,7 +27,7 @@ public enum ZooKeeperConnection {
      */
     final static int CONNECTION_TIMEOUT = 10;
 
-    final Queue<ZooKeeperConnectionObserver> observers = new ConcurrentLinkedQueue<ZooKeeperConnectionObserver>();
+    final Queue<ZooKeeperConnectionObserver> observers = new ConcurrentLinkedQueue<>();
 
     ZooKeeper zookeeper = null;
     static String quorumAddresses = null;

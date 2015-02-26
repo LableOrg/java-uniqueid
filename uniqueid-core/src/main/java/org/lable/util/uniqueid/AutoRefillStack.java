@@ -18,7 +18,7 @@ public class AutoRefillStack implements IDGenerator {
 
     final int batchSize;
     final IDGenerator generator;
-    final Deque<byte[]> idStack = new ArrayDeque<byte[]>();
+    final Deque<byte[]> idStack = new ArrayDeque<>();
 
     protected AutoRefillStack(IDGenerator generator, int batchSize) {
         this.batchSize = batchSize;
@@ -62,7 +62,7 @@ public class AutoRefillStack implements IDGenerator {
         if (size < 0) {
             size = 0;
         }
-        Deque<byte[]> batch = new ArrayDeque<byte[]>(size);
+        Deque<byte[]> batch = new ArrayDeque<>(size);
         while (size > 0) {
             batch.add(popOne());
             size--;

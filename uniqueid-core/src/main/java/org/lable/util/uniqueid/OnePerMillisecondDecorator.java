@@ -72,7 +72,7 @@ public class OnePerMillisecondDecorator implements IDGenerator {
 
     @Override
     public Deque<byte[]> batch(int size) throws GeneratorException {
-        Deque<byte[]> deck = new ArrayDeque<byte[]>();
+        Deque<byte[]> deck = new ArrayDeque<>();
         for (int i = 0; i < size; i++) {
             deck.add(generate());
         }

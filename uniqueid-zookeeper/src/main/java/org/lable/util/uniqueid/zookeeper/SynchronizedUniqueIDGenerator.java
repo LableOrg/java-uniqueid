@@ -28,8 +28,7 @@ public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
     ResourceClaim resourceClaim;
     final int poolSize;
 
-    static ConcurrentMap<String, SynchronizedUniqueIDGenerator> instances =
-            new ConcurrentHashMap<String, SynchronizedUniqueIDGenerator>();
+    static ConcurrentMap<String, SynchronizedUniqueIDGenerator> instances = new ConcurrentHashMap<>();
 
     /**
      * Create a new SynchronizedUniqueIDGenerator instance.

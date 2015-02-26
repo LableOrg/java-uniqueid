@@ -90,7 +90,7 @@ public class ZooKeeperHelper {
      */
     static List<String> pathParts(String path) {
         String[] pathParts = path.split("/");
-        List<String> parts = new ArrayList<String>(pathParts.length);
+        List<String> parts = new ArrayList<>(pathParts.length);
         String pathSoFar = "";
         for (String pathPart : pathParts) {
             if (!pathPart.equals("")) {

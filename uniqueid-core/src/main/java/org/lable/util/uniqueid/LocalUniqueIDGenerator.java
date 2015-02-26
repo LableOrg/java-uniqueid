@@ -11,8 +11,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class LocalUniqueIDGenerator extends BaseUniqueIDGenerator {
 
-    final static ConcurrentMap<String, BaseUniqueIDGenerator> instances =
-            new ConcurrentHashMap<String, BaseUniqueIDGenerator>();
+    final static ConcurrentMap<String, BaseUniqueIDGenerator> instances = new ConcurrentHashMap<>();
 
     /**
      * Create a new UniqueIDGenerator instance.

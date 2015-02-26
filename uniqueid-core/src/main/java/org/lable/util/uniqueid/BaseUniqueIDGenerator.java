@@ -95,7 +95,7 @@ public abstract class BaseUniqueIDGenerator implements IDGenerator {
      */
     @Override
     public Deque<byte[]> batch(int size) throws GeneratorException {
-        Deque<byte[]> stack = new ArrayDeque<byte[]>();
+        Deque<byte[]> stack = new ArrayDeque<>();
         for (int i = 0; i < size; i++) {
             stack.add(generate());
         }

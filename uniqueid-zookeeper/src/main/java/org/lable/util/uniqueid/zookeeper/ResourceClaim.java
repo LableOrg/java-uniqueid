@@ -7,13 +7,13 @@ import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnectionObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
-import static org.lable.util.uniqueid.zookeeper.ZooKeeperHelper.create;
 import static org.lable.util.uniqueid.zookeeper.ZooKeeperHelper.createIfNotThere;
 import static org.lable.util.uniqueid.zookeeper.ZooKeeperHelper.mkdirp;
 
@@ -21,7 +21,7 @@ import static org.lable.util.uniqueid.zookeeper.ZooKeeperHelper.mkdirp;
  * Represents a claim on resource (represented by an int) from a finite pool of resources negotiated through a
  * queueing protocol facilitated by a ZooKeeper-quorum.
  */
-public class ResourceClaim implements ZooKeeperConnectionObserver {
+public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
     final static Logger logger = LoggerFactory.getLogger(ResourceClaim.class);
 
     static String ZNODE;
