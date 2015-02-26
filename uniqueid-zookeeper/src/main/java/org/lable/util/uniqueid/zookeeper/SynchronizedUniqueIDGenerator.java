@@ -52,7 +52,7 @@ public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
      * @throws IOException Thrown when something went wrong trying to find the cluster ID or trying to claim a
      *                     generator ID.
      */
-    public static synchronized SynchronizedUniqueIDGenerator generator(String zookeeperQuorum, String znode)
+    public static synchronized SynchronizedUniqueIDGenerator generatorFor(String zookeeperQuorum, String znode)
             throws IOException {
 
         String instanceKey = zookeeperQuorum + "@" + znode;

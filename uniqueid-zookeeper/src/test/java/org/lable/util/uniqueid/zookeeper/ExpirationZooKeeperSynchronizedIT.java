@@ -40,7 +40,7 @@ public class ExpirationZooKeeperSynchronizedIT {
 
     @Test
     public void testExpirationOfResourceClaimTest() throws Exception {
-        SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generator(zookeeperQuorum, znode);
+        SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generatorFor(zookeeperQuorum, znode);
         generator.generate();
         int claim1 = generator.resourceClaim.hashCode();
 

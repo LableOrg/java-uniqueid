@@ -2,7 +2,6 @@ package org.lable.util.uniqueid.zookeeper;
 
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.lable.util.uniqueid.BaseUniqueIDGenerator;
@@ -11,22 +10,26 @@ import org.lable.util.uniqueid.IDGenerator;
 import org.lable.util.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareClusterID;
 import static org.lable.util.uniqueid.zookeeper.ResourceTestPoolHelper.prepareEmptyQueueAndPool;
 
-public class SynchronizedUniqueIDGeneratorIT {
+public class MultipleGeneratorsIT {
 
     String zookeeperQuorum;
-    String znode = "/unique-id-generator";
+    String znodeA = "/unique-id-generator-a";
+    String znodeB = "/unique-id-generator-b";
 
     @Rule
     public ZooKeeperInstance zkInstance = new ZooKeeperInstance();
@@ -39,21 +42,16 @@ public class SynchronizedUniqueIDGeneratorIT {
         ZooKeeperConnection.configure(zookeeperQuorum);
         ZooKeeperConnection.reset();
         ZooKeeper zookeeper = ZooKeeperConnection.get();
-        prepareEmptyQueueAndPool(zookeeper, znode);
-        prepareClusterID(zookeeper, znode, CLUSTER_ID);
+
+        prepareEmptyQueueAndPool(zookeeper, znodeA);
+        prepareClusterID(zookeeper, znodeA, CLUSTER_ID);
+
+        prepareEmptyQueueAndPool(zookeeper, znodeB);
+        prepareClusterID(zookeeper, znodeB, CLUSTER_ID);
     }
 
     @Test
-    public void simpleTest() throws Exception {
-        IDGenerator generator = SynchronizedUniqueIDGenerator.generatorFor(zookeeperQuorum, znode);
-        byte[] result = generator.generate();
-        BaseUniqueIDGenerator.Blueprint blueprint = BaseUniqueIDGenerator.parse(result);
-        assertThat(result.length, is(8));
-        assertThat(blueprint.getClusterId(), is(CLUSTER_ID));
-    }
-
-    @Test
-    public void concurrentTest() throws Exception {
+    public void doubleConcurrentTest() throws Exception {
         final int threadCount = 20;
         final int batchSize = 500;
 
@@ -70,8 +68,8 @@ public class SynchronizedUniqueIDGeneratorIT {
                     ready.countDown();
                     try {
                         start.await();
-                        BaseUniqueIDGenerator generator =
-                                SynchronizedUniqueIDGenerator.generatorFor(zookeeperQuorum, znode);
+                        String znode = number % 2 == 0 ? znodeA : znodeB;
+                        IDGenerator generator = SynchronizedUniqueIDGenerator.generatorFor(zookeeperQuorum, znode);
                         result.put(number, generator.batch(batchSize));
                     } catch (IOException | InterruptedException | GeneratorException e) {
                         fail();
@@ -87,34 +85,18 @@ public class SynchronizedUniqueIDGeneratorIT {
 
         assertThat(result.size(), is(threadCount));
 
-        Set<byte[]> allIDs = new HashSet<>();
+        Set<byte[]> allAIDs = new HashSet<>();
+        Set<byte[]> allBIDs = new HashSet<>();
         for (Map.Entry<Integer, Deque<byte[]>> entry : result.entrySet()) {
+            Integer number = entry.getKey();
             assertThat(entry.getValue().size(), is(batchSize));
-            allIDs.addAll(entry.getValue());
+            if (number % 2 == 0) {
+                allAIDs.addAll(entry.getValue());
+            } else {
+                allBIDs.addAll(entry.getValue());
+            }
         }
-        assertThat(allIDs.size(), is(threadCount * batchSize));
-    }
-
-    @Test
-    @Ignore
-    public void testAgainstRealQuorum() throws Exception {
-        ZooKeeperConnection.configure("zka,zkb,zkc");
-        concurrentTest();
-    }
-
-    @Test
-    public void relinquishResourceClaimTest() throws Exception {
-        SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generatorFor(zookeeperQuorum, znode);
-        generator.generate();
-        int claim1 = generator.resourceClaim.hashCode();
-
-        // Explicitly relinquish the generator ID claim.
-        generator.relinquishGeneratorIDClaim();
-
-        generator.generate();
-        int claim2 = generator.resourceClaim.hashCode();
-
-        // Verify that a new ResourceClaim object was instantiated.
-        assertThat(claim1, is(not(claim2)));
+        assertThat(allAIDs.size(), is(threadCount * batchSize / 2));
+        assertThat(allBIDs.size(), is(threadCount * batchSize / 2));
     }
 }

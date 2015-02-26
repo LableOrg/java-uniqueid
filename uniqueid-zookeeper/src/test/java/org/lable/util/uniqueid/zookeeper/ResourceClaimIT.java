@@ -57,7 +57,7 @@ public class ResourceClaimIT {
         final CountDownLatch ready = new CountDownLatch(threadCount);
         final CountDownLatch start = new CountDownLatch(1);
         final CountDownLatch done = new CountDownLatch(threadCount);
-        final ConcurrentMap<Integer, Integer> result = new ConcurrentHashMap<Integer, Integer>(threadCount);
+        final ConcurrentMap<Integer, Integer> result = new ConcurrentHashMap<>(threadCount);
 
         for (int i = 0; i < threadCount; i++) {
             final Integer number = 10 + i;
@@ -69,9 +69,7 @@ public class ResourceClaimIT {
                         start.await();
                         ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize, znode);
                         result.put(number, claim.get());
-                    } catch (IOException e) {
-                        fail();
-                    } catch (InterruptedException e) {
+                    } catch (IOException | InterruptedException e) {
                         fail();
                     }
                     done.countDown();
@@ -85,7 +83,7 @@ public class ResourceClaimIT {
 
         assertThat(result.size(), is(threadCount));
 
-        Set<Integer> allResources = new HashSet<Integer>();
+        Set<Integer> allResources = new HashSet<>();
         allResources.addAll(result.values());
         assertThat(allResources.size(), is(threadCount));
     }
@@ -98,7 +96,7 @@ public class ResourceClaimIT {
         final CountDownLatch ready = new CountDownLatch(threadCount);
         final CountDownLatch start = new CountDownLatch(1);
         final CountDownLatch done = new CountDownLatch(threadCount);
-        final ConcurrentMap<Integer, Integer> result = new ConcurrentHashMap<Integer, Integer>(threadCount);
+        final ConcurrentMap<Integer, Integer> result = new ConcurrentHashMap<>(threadCount);
 
         for (int i = 0; i < threadCount; i++) {
             final Integer number = 10 + i;
@@ -111,9 +109,7 @@ public class ResourceClaimIT {
                         ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize, znode);
                         result.put(number, claim.get());
                         claim.close();
-                    } catch (IOException e) {
-                        fail();
-                    } catch (InterruptedException e) {
+                    } catch (IOException | InterruptedException e) {
                         fail();
                     }
                     done.countDown();
@@ -127,7 +123,7 @@ public class ResourceClaimIT {
 
         assertThat(result.size(), is(threadCount));
 
-        Set<Integer> allResources = new HashSet<Integer>();
+        Set<Integer> allResources = new HashSet<>();
         allResources.addAll(result.values());
         assertThat(allResources.size(), is(1));
     }
