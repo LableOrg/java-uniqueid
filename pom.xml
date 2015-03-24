@@ -27,7 +27,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <zookeeper.version>3.4.5</zookeeper.version>
+    <zookeeper.version>3.4.6</zookeeper.version>
     <powermock.version>1.5.1</powermock.version>
     <junit.version>4.11</junit.version>
     <scm.url>scm:git:git@git.lable.org:lable/unique-id-generator.git</scm.url>
