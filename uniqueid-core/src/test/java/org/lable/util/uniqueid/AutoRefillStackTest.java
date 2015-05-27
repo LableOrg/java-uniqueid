@@ -1,7 +1,6 @@
 package org.lable.util.uniqueid;
 
 import org.junit.Test;
-import org.powermock.reflect.Whitebox;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -12,8 +11,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
+
 
 public class AutoRefillStackTest {
     Random random = new Random();
@@ -21,8 +19,8 @@ public class AutoRefillStackTest {
     @Test
     public void refillTest() throws GeneratorException {
         IDGenerator generator = mock(IDGenerator.class);
-        Deque<byte[]> deck1 = new ArrayDeque<byte[]>(10);
-        Deque<byte[]> deck2 = new ArrayDeque<byte[]>(10);
+        Deque<byte[]> deck1 = new ArrayDeque<>(10);
+        Deque<byte[]> deck2 = new ArrayDeque<>(10);
         for (int i = 0; i < 10; i++) {
             deck1.add(Long.toHexString(random.nextLong()).getBytes());
             deck2.add(Long.toHexString(random.nextLong()).getBytes());

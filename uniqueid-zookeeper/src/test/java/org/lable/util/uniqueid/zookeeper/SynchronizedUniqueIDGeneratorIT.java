@@ -96,13 +96,6 @@ public class SynchronizedUniqueIDGeneratorIT {
     }
 
     @Test
-    @Ignore
-    public void testAgainstRealQuorum() throws Exception {
-        ZooKeeperConnection.configure("zka,zkb,zkc");
-        concurrentTest();
-    }
-
-    @Test
     public void relinquishResourceClaimTest() throws Exception {
         SynchronizedUniqueIDGenerator generator = SynchronizedUniqueIDGenerator.generatorFor(zookeeperQuorum, znode);
         generator.generate();

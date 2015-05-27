@@ -7,10 +7,10 @@ public interface ZooKeeperConnectionObserver {
     /**
      * Called when the connection to the ZooKeeper quorum was interrupted.
      */
-    public void disconnected();
+    void disconnected();
 
     /**
      * Called when the connection to the ZooKeeper quorum is established.
      */
-    public void connected();
+    void connected();
 }

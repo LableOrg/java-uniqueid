@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
  * spread.
  * </p>
  * <p>
- * This is not normally necessary or desired, but can be useful when you want to generate several IDs, but you don't
+ * This is not normally necessary nor desired, but can be useful when you want to generate several IDs, but you don't
  * want subsequent IDs to start with the same byte.
  * </p>
  * <p>

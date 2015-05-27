@@ -90,7 +90,7 @@ public enum ZooKeeperConnection {
         INSTANCE.observers.add(observer);
     }
 
-    public static void unregisterObserver(ZooKeeperConnectionObserver observer) {
+    public static void deregisterObserver(ZooKeeperConnectionObserver observer) {
         INSTANCE.observers.remove(observer);
     }
 
@@ -119,7 +119,6 @@ public enum ZooKeeperConnection {
         public void process(WatchedEvent event) {
             switch (event.getState()) {
                 case Disconnected:
-                    // notifySubscribers(event.getState());
                     logger.warn("Disconnected from ZooKeeper quorum.");
                     for (ZooKeeperConnectionObserver observer : INSTANCE.observers) {
                         observer.disconnected();
