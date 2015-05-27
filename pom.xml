@@ -11,7 +11,7 @@
 
   <groupId>org.lable.util.uniqueid</groupId>
   <artifactId>uniqueid</artifactId>
-  <version>1.11-SNAPSHOT</version>
+  <version>1.11</version>
   <packaging>pom</packaging>
 
   <name>Unique ID generator</name>
@@ -38,7 +38,7 @@
     <connection>${scm.url}</connection>
     <url>${scm.url}</url>
     <developerConnection>${scm.url}</developerConnection>
-    <tag>HEAD</tag>
+    <tag>v1.11</tag>
   </scm>
 
   <dependencyManagement>
