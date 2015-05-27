@@ -41,7 +41,7 @@ public class ExpiringResourceClaimIT {
 
     @Test
     public void expirationTest() throws IOException, InterruptedException {
-        ResourceClaim claim = ExpiringResourceClaim.claim(
+        ResourceClaim claim = ExpiringResourceClaim.claimExpiring(
                 ZooKeeperConnection.get(), 64, znode, TimeUnit.SECONDS.toMillis(2));
         int resource = claim.get();
         assertThat(claim.state, is(ResourceClaim.State.HAS_CLAIM));

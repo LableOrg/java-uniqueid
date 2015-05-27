@@ -26,11 +26,31 @@ public class ExpiringResourceClaim extends ResourceClaim {
         }, timeout);
     }
 
-    public static ResourceClaim claim(ZooKeeper zookeeper, String znode, int poolSize) throws IOException {
-        return claim(zookeeper, poolSize, znode, DEFAULT_TIMEOUT);
+    /**
+     * Claim a resource.
+     *
+     * @param zookeeper ZooKeeper connection to use.
+     * @param poolSize Size of the resource pool.
+     * @param znode Root znode of the ZooKeeper resource-pool.
+     * @return A resource claim.
+     * @throws IOException
+     */
+    public static ResourceClaim claimExpiring(ZooKeeper zookeeper, int poolSize, String znode)
+            throws IOException {
+        return claimExpiring(zookeeper, poolSize, znode, DEFAULT_TIMEOUT);
     }
 
-    public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize, String znode, long timeout)
+    /**
+     * Claim a resource.
+     *
+     * @param zookeeper ZooKeeper connection to use.
+     * @param poolSize Size of the resource pool.
+     * @param znode Root znode of the ZooKeeper resource-pool.
+     * @param timeout Delay in milliseconds before the claim expires.
+     * @return A resource claim.
+     * @throws IOException
+     */
+    public static ResourceClaim claimExpiring(ZooKeeper zookeeper, int poolSize, String znode, long timeout)
             throws IOException {
         return new ExpiringResourceClaim(zookeeper, poolSize, znode, timeout);
     }

@@ -62,7 +62,8 @@ public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
             assertParameterWithinBounds("cluster-ID", 0, MAX_CLUSTER_ID, clusterId);
             logger.debug("Creating new instance.");
             int poolSize = BaseUniqueIDGenerator.MAX_GENERATOR_ID + 1;
-            ResourceClaim resourceClaim = ExpiringResourceClaim.claim(ZooKeeperConnection.get(), poolSize, znode);
+            ResourceClaim resourceClaim =
+                    ExpiringResourceClaim.claimExpiring(ZooKeeperConnection.get(), poolSize, znode);
             instances.putIfAbsent(instanceKey, new SynchronizedUniqueIDGenerator(resourceClaim, clusterId));
         }
         return instances.get(instanceKey);

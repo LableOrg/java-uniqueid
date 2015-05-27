@@ -81,6 +81,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      *
      * @param zookeeper ZooKeeper connection to use.
      * @param poolSize Size of the resource pool.
+     * @param znode Root znode of the ZooKeeper resource-pool.
      * @return A resource claim.
      * @throws IOException
      */
