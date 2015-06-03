@@ -2,17 +2,18 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>uniqueid</artifactId>
-    <groupId>org.lable.util.uniqueid</groupId>
+    <groupId>org.lable.oss.uniqueid</groupId>
     <version>1.12-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>uniqueid-zookeeper</artifactId>
+  <name>UniqueID :: ZooKeeper</name>
 
   <dependencies>
     <dependency>
       <artifactId>uniqueid-core</artifactId>
-      <groupId>org.lable.util.uniqueid</groupId>
+      <groupId>org.lable.oss.uniqueid</groupId>
     </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
@@ -23,17 +24,8 @@
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-
-      <plugin>
         <artifactId>maven-failsafe-plugin</artifactId>
       </plugin>
-
-      <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-      </plugin>
-
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>

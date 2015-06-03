@@ -1,8 +1,13 @@
 Unique ID generator
 ===================
 
-A small collection of unique ID generators, currently limited to eight byte key generating
-generators.
+A unique ID generator that generates unique-ish eight byte identifiers.
+
+## What is it for?
+
+When you want to assign unique identifiers to database records in a distributed computing
+environment that are short and guaranteed to be unique (within your data realm), this
+library can provide them.
 
 ## Local usage
 
@@ -24,7 +29,7 @@ byte[] id = generator.generate();
 ```
 
 The `LocalUniqueIDGenerator` assumes that you can guarantee that it is the only generator
-with that specific generator-ID and cluster-ID combination, during its lifetime.
+with the generator-ID and cluster-ID combination you chose, during its lifetime.
 
 If there is a fixed number of processes that may generate IDs, you can assign one of the
 64 possible generator-IDs to each one. For a more in-depth explanation of generator-IDs
@@ -32,7 +37,7 @@ and cluster-IDs, see [eight byte ID structure](doc/eight-byte-id-structure.md).
 
 ## Distributed usage with a ZooKeeper quorum
 
-If you need to generate unique IDs in a distributed environment, automatic coordination of
+If you need to generate unique IDs within a distributed environment, automatic coordination of
 the generator-ID can be handled by the `SynchronizedUniqueIDGenerator` class, which uses
 [Apache ZooKeeper](http://zookeeper.apache.org/) to synchronize access to a pool of
 generator IDs.
