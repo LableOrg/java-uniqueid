@@ -41,8 +41,14 @@
 
   <properties>
     <zookeeper.version>3.4.6</zookeeper.version>
-    <scm.url>scm:git:git@git.lable.org:lable/unique-id-generator.git</scm.url>
   </properties>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
 
   <scm>
     <connection>scm:git:git@git.lable.org:lable/java-unique-id.git</connection>
