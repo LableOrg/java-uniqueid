@@ -53,7 +53,7 @@
   <scm>
     <connection>scm:git:git@git.lable.org:lable/java-unique-id.git</connection>
     <developerConnection>scm:git:git@git.lable.org:lable/java-unique-id.git</developerConnection>
-    <url>http://github.com:LableOrg/java-unique-id.git</url>
+    <url>https://github.com/LableOrg/java-uniqueid</url>
     <tag>HEAD</tag>
   </scm>
 
