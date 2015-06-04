@@ -51,8 +51,8 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:git@git.lable.org:lable/java-unique-id.git</connection>
-    <developerConnection>scm:git:git@git.lable.org:lable/java-unique-id.git</developerConnection>
+    <connection>scm:git:git@github.com:LableOrg/java-uniqueid.git</connection>
+    <developerConnection>scm:git:git@github.com:LableOrg/java-uniqueid.git</developerConnection>
     <url>https://github.com/LableOrg/java-uniqueid</url>
     <tag>HEAD</tag>
   </scm>
