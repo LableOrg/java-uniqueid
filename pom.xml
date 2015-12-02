@@ -33,6 +33,7 @@
   <name>UniqueID</name>
   <description>A unique ID generator that specialises in small IDs.</description>
   <inceptionYear>2014</inceptionYear>
+  <url>https://github.com/LableOrg/java-uniqueid</url>
 
   <modules>
     <module>uniqueid-core</module>
