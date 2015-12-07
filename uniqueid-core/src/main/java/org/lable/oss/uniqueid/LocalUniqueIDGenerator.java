@@ -15,6 +15,8 @@
  */
 package org.lable.oss.uniqueid;
 
+import javax.annotation.PreDestroy;
+import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -54,5 +56,11 @@ public class LocalUniqueIDGenerator extends BaseUniqueIDGenerator {
             instances.putIfAbsent(generatorAndCluster, new LocalUniqueIDGenerator(generatorId, clusterId));
         }
         return instances.get(generatorAndCluster);
+    }
+
+    @PreDestroy
+    @Override
+    public void close() throws IOException {
+        // No-op.
     }
 }

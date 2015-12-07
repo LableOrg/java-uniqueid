@@ -21,6 +21,7 @@ import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -82,6 +83,14 @@ public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
             instances.putIfAbsent(instanceKey, new SynchronizedUniqueIDGenerator(resourceClaim, clusterId));
         }
         return instances.get(instanceKey);
+    }
+
+    @PreDestroy
+    @Override
+    public void close() throws IOException {
+        logger.info("Closing unique ID generator.");
+        resourceClaim.close();
+        ZooKeeperConnection.shutdown();
     }
 
     /**

@@ -15,12 +15,13 @@
  */
 package org.lable.oss.uniqueid;
 
+import java.io.Closeable;
 import java.util.Deque;
 
 /**
  * Generate short, unique IDs.
  */
-public interface IDGenerator {
+public interface IDGenerator extends Closeable {
     /**
      * Generate a fresh ID.
      *

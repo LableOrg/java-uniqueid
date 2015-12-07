@@ -15,6 +15,8 @@
  */
 package org.lable.oss.uniqueid;
 
+import javax.annotation.PreDestroy;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.NoSuchElementException;
@@ -59,6 +61,12 @@ public class AutoRefillStack implements IDGenerator {
      */
     public static IDGenerator decorate(IDGenerator generator, int batchSize) {
         return new AutoRefillStack(generator, batchSize);
+    }
+
+    @PreDestroy
+    @Override
+    public void close() throws IOException {
+        generator.close();
     }
 
     /**

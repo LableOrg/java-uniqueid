@@ -65,6 +65,18 @@ public enum ZooKeeperConnection {
         return INSTANCE.zookeeper;
     }
 
+    public static void shutdown() {
+        if (INSTANCE.zookeeper == null) return;
+
+        try {
+            INSTANCE.zookeeper.close();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            INSTANCE.zookeeper = null;
+        }
+    }
+
     /**
      * Connect to the ZooKeeper quorum, or timeout if it is unreachable.
      *

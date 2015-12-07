@@ -15,6 +15,7 @@
  */
 package org.lable.oss.uniqueid;
 
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +50,11 @@ public class OnePerMillisecondDecorator implements IDGenerator {
      */
     public static IDGenerator decorate(IDGenerator generator) {
         return new OnePerMillisecondDecorator(generator);
+    }
+
+    @Override
+    public void close() throws IOException {
+        generator.close();
     }
 
     @Override
