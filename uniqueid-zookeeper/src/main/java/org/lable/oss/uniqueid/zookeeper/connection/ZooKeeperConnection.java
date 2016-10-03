@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2014 Lable (info@lable.nl)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -123,7 +123,7 @@ public enum ZooKeeperConnection {
 
     /**
      * Remove any preexisting ZooKeeper connection instance.
-     * <p/>
+     * <p>
      * This method should be called when the connection to the ZooKeeper is expired, so a subsequent call to
      * {@link #get()} will establish a new connection.
      */

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2014 Lable (info@lable.nl)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,7 @@ import java.util.NoSuchElementException;
 
 /**
  * A caching wrapper around an {@link IDGenerator} instance.
- * <p/>
+ * <p>
  * This class will cache a bunch of generated IDs and automatically refill the stack when it runs out. By letting
  * this class handle the caching, calling classes can simply call {@link #generate()} whenever a new ID is needed,
  * without having to worry about any performance hit you might see when calling
@@ -97,7 +97,6 @@ public class AutoRefillStack implements IDGenerator {
      * Grab a single ID from the stack. If the stack is empty, load up a new batch from the wrapped generator.
      *
      * @return A single ID.
-     * @throws GeneratorException
      */
     byte[] popOne() throws GeneratorException {
         try {

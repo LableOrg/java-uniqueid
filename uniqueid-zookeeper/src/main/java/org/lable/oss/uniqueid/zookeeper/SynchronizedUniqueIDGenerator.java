@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2014 Lable (info@lable.nl)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,11 +29,11 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * A {@link BaseUniqueIDGenerator} that coordinates the generator ID used by other processes
  * using this class via the same ZooKeeper quorum by attempting to claim an available ID for itself.
- * <p/>
+ * <p>
  * Although claims on a generator ID will be automatically relinquished after the connection to the ZooKeeper quorum
  * is lost, instances of this class should be explicitly closed after use, if you do not expect to generate anymore
  * IDs at that time.
- * <p/>
+ * <p>
  * Because claimed generator IDs are automatically returned to the pool after a set time
  * ({@link ExpiringResourceClaim#DEFAULT_TIMEOUT}),
  * there is no guarantee that IDs generated have the same generator ID.
@@ -50,7 +50,7 @@ public class SynchronizedUniqueIDGenerator extends BaseUniqueIDGenerator {
      * Create a new SynchronizedUniqueIDGenerator instance.
      *
      * @param resourceClaim Resource claim for a generator ID.
-     * @param clusterId     Cluster ID to use (0 <= n < 16).
+     * @param clusterId     Cluster ID to use (0 ≤ n &lt; 16).
      */
     SynchronizedUniqueIDGenerator(ResourceClaim resourceClaim, int clusterId) {
         super(resourceClaim.get(), clusterId);

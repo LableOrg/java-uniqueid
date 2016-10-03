@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2014 Lable (info@lable.nl)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,8 +82,6 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      *
      * @param zookeeper ZooKeeper connection to use.
      * @param znode Base-path for our znodes.
-     * @throws KeeperException
-     * @throws InterruptedException
      */
     void ensureRequiredZnodesExist(ZooKeeper zookeeper, String znode) throws KeeperException, InterruptedException {
         mkdirp(zookeeper, znode);
@@ -98,7 +96,6 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * @param poolSize Size of the resource pool.
      * @param znode Root znode of the ZooKeeper resource-pool.
      * @return A resource claim.
-     * @throws IOException
      */
     public static ResourceClaim claim(ZooKeeper zookeeper, int poolSize, String znode) throws IOException {
         return new ResourceClaim(zookeeper, poolSize, znode);
@@ -108,7 +105,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * Get the claimed resource.
      *
      * @return The resource claimed.
-     * @throws java.lang.IllegalStateException Thrown when the claim is no longer held.
+     * @throws IllegalStateException Thrown when the claim is no longer held.
      */
     public int get() {
         if (state != State.HAS_CLAIM) {
@@ -136,8 +133,6 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * @param zookeeper ZooKeeper connection to use.
      * @param lockNode Path to the znode representing the locking queue.
      * @return Name of the first node in the queue.
-     * @throws KeeperException
-     * @throws InterruptedException
      */
     static String acquireLock(ZooKeeper zookeeper, String lockNode) throws KeeperException, InterruptedException {
         // Inspired by the queueing algorithm suggested here:
@@ -158,8 +153,6 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * @param zookeeper ZooKeeper connection to use.
      * @param lockNode Path to the znode representing the locking queue.
      * @return The claimed ticket.
-     * @throws InterruptedException
-     * @throws KeeperException
      */
     static String takeQueueTicket(ZooKeeper zookeeper, String lockNode) throws InterruptedException, KeeperException {
         // The ticket number includes a random component to decrease the chances of collision. Collision is handled
@@ -178,8 +171,6 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * @param zookeeper ZooKeeper connection to use.
      * @param lockNode Path to the znode representing the locking queue.
      * @param ticket Name of the first node in the queue.
-     * @throws KeeperException
-     * @throws InterruptedException
      */
     static void releaseTicket(ZooKeeper zookeeper, String lockNode, String ticket)
             throws KeeperException, InterruptedException {
@@ -202,8 +193,6 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * @param lockNode Path to the znode representing the locking queue.
      * @param placeInLine Name of our current position in the queue.
      * @return Name of the first node in the queue, when we are it.
-     * @throws KeeperException
-     * @throws InterruptedException
      */
     static String waitInLine(ZooKeeper zookeeper, String lockNode, String placeInLine)
             throws KeeperException, InterruptedException {
@@ -284,8 +273,6 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * @param lockNode Path to the znode representing the locking queue.
      * @param ticket Name of the ticket to attempt to grab.
      * @return True on success, false if the ticket was already grabbed by another process.
-     * @throws InterruptedException
-     * @throws KeeperException
      */
     static boolean grabTicket(ZooKeeper zookeeper, String lockNode, String ticket)
             throws InterruptedException, KeeperException {
@@ -312,8 +299,6 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * @param poolNode Path to the znode representing the resource pool.
      * @param poolSize Size of the resource pool.
      * @return The claimed resource.
-     * @throws KeeperException
-     * @throws InterruptedException
      */
     static int claimResource(ZooKeeper zookeeper, String poolNode, int poolSize)
             throws KeeperException, InterruptedException {
@@ -390,7 +375,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
 
     @Override
     public void connected() {
-        // NOOP.
+        // No-op.
     }
 
     /**

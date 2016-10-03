@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2014 Lable (info@lable.nl)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,8 +33,8 @@ public class LocalUniqueIDGenerator extends BaseUniqueIDGenerator {
     /**
      * Create a new UniqueIDGenerator instance.
      *
-     * @param generatorId Generator ID to use (0 <= n < 64).
-     * @param clusterId   Cluster ID to use (0 <= n < 16).
+     * @param generatorId Generator ID to use (0 ≤ n &lt; 64).
+     * @param clusterId   Cluster ID to use (0 ≤ n &lt; 16).
      */
     protected LocalUniqueIDGenerator(int generatorId, int clusterId) {
         super(generatorId, clusterId);
@@ -43,8 +43,8 @@ public class LocalUniqueIDGenerator extends BaseUniqueIDGenerator {
     /**
      * Return the UniqueIDGenerator instance for this specific generator-ID, cluster-ID combination.
      *
-     * @param generatorId Generator ID to use (0 <= n < 64).
-     * @param clusterId   Cluster ID to use (0 <= n < 16).
+     * @param generatorId Generator ID to use (0 ≤ n &lt; 64).
+     * @param clusterId   Cluster ID to use (0 ≤ n &lt; 16).
      * @return A thread-safe UniqueIDGenerator instance.
      */
     public synchronized static IDGenerator generatorFor(int generatorId, int clusterId) {

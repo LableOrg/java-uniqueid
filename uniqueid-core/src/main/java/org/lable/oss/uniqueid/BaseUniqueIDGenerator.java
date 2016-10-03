@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2014 Lable (info@lable.nl)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,10 +21,12 @@ import java.util.Deque;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Generate short, possibly unique IDs based on the current timestamp. Whether the IDs are truly unique or not
- * depends on the scope of its use. If the combination of generator-ID and cluster-ID passed to this class is unique —
- * i.e., there is only one ID-generator using that specific combination of generator-ID and cluster-ID within the
- * confines of your computing environment at the moment you generate an ID — then the IDs returned are unique.
+ * Generate short, possibly unique IDs based on the current timestamp.
+ * <p>
+ * Whether the IDs are truly unique or not depends on the scope of its use. If the combination of generator-ID and
+ * cluster-ID passed to this class is unique — i.e., there is only one ID-generator using that specific combination of
+ * generator-ID and cluster-ID within the confines of your computing environment at the moment you generate an ID —
+ * then the IDs returned are unique.
  */
 public abstract class BaseUniqueIDGenerator implements IDGenerator {
     /*
@@ -70,8 +72,8 @@ public abstract class BaseUniqueIDGenerator implements IDGenerator {
     /**
      * Create a new UniqueIDGenerator instance.
      *
-     * @param generatorId Generator ID to use (0 <= n < 64).
-     * @param clusterId   Cluster ID to use (0 <= n < 16).
+     * @param generatorId Generator ID to use (0 ≤ n &lt; 64).
+     * @param clusterId   Cluster ID to use (0 ≤ n &lt; 16).
      */
     protected BaseUniqueIDGenerator(int generatorId, int clusterId) {
         this.generatorId = generatorId;
@@ -118,14 +120,14 @@ public abstract class BaseUniqueIDGenerator implements IDGenerator {
     }
 
     /**
-     * Helper method that throws an {@link java.lang.IllegalArgumentException} when a number is not within the
+     * Helper method that throws an {@link IllegalArgumentException} when a number is not within the
      * supplied range.
      *
      * @param name      Name of the parameter to use in the Exception message.
      * @param lower     Lower bound (inclusive).
      * @param upper     Upper bound (inclusive).
      * @param parameter The parameter to test.
-     * @throws java.lang.IllegalArgumentException Thrown when the parameter is out of bounds.
+     * @throws IllegalArgumentException Thrown when the parameter is out of bounds.
      */
     protected static void assertParameterWithinBounds(String name, long lower, long upper, long parameter) {
         if (parameter < lower || parameter > upper) {
