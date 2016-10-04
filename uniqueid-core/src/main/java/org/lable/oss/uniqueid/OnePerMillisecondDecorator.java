@@ -21,17 +21,13 @@ import java.util.Deque;
 import java.util.concurrent.TimeUnit;
 
 /**
- * <p>
  * Decorator for an {@link IDGenerator} that sleeps at least a millisecond between each invocation to guarantee ID
  * spread.
- * </p>
  * <p>
  * This is not normally necessary nor desired, but can be useful when you want to generate several IDs, but you don't
  * want subsequent IDs to start with the same byte.
- * </p>
  * <p>
  * This class is of course significantly slower than using an undecorated generator.
- * </p>
  */
 public class OnePerMillisecondDecorator implements IDGenerator {
     final IDGenerator generator;

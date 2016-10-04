@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%highlight{%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{1}#%M:%L - %msg%n}{FATAL=red, ERROR=red, WARN=yellow bold, INFO=blue, DEBUG=green bold, TRACE=black}"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Logger name="org.lable.oss.uniqueid.zookeeper.ResourceClaim" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.lable.oss.uniqueid.zookeeper.ExpiringResourceClaim" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Root level="info">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>

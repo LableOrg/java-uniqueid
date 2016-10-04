@@ -15,7 +15,9 @@
  */
 package org.lable.oss.uniqueid.zookeeper;
 
-import org.apache.zookeeper.ZooKeeper;
+import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Timer;
@@ -27,13 +29,13 @@ import java.util.concurrent.TimeUnit;
  * after a set amount of time.
  */
 public class ExpiringResourceClaim extends ResourceClaim {
+    private static final Logger logger = LoggerFactory.getLogger(ExpiringResourceClaim.class);
 
     public final static long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
-    ExpiringResourceClaim(ZooKeeper zookeeper, int poolSize, String znode, long timeout) throws IOException {
-        super(zookeeper, poolSize, znode);
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
+    ExpiringResourceClaim(ZooKeeperConnection zooKeeperConnection, int poolSize, String znode, long timeout) throws IOException {
+        super(zooKeeperConnection, poolSize, znode);
+        new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
                 close();
@@ -44,29 +46,34 @@ public class ExpiringResourceClaim extends ResourceClaim {
     /**
      * Claim a resource.
      *
-     * @param zookeeper ZooKeeper connection to use.
-     * @param poolSize Size of the resource pool.
-     * @param znode Root znode of the ZooKeeper resource-pool.
+     * @param zooKeeperConnection ZooKeeper connection to use.
+     * @param poolSize            Size of the resource pool.
+     * @param znode               Root znode of the ZooKeeper resource-pool.
      * @return A resource claim.
-     * @throws IOException
      */
-    public static ResourceClaim claimExpiring(ZooKeeper zookeeper, int poolSize, String znode)
+    public static ResourceClaim claimExpiring(ZooKeeperConnection zooKeeperConnection, int poolSize, String znode)
             throws IOException {
-        return claimExpiring(zookeeper, poolSize, znode, DEFAULT_TIMEOUT);
+        return claimExpiring(zooKeeperConnection, poolSize, znode, DEFAULT_TIMEOUT);
     }
 
     /**
      * Claim a resource.
      *
-     * @param zookeeper ZooKeeper connection to use.
-     * @param poolSize Size of the resource pool.
-     * @param znode Root znode of the ZooKeeper resource-pool.
-     * @param timeout Delay in milliseconds before the claim expires.
+     * @param zooKeeperConnection ZooKeeper connection to use.
+     * @param poolSize            Size of the resource pool.
+     * @param znode               Root znode of the ZooKeeper resource-pool.
+     * @param timeout             Delay in milliseconds before the claim expires.
      * @return A resource claim.
-     * @throws IOException
      */
-    public static ResourceClaim claimExpiring(ZooKeeper zookeeper, int poolSize, String znode, long timeout)
+    public static ResourceClaim claimExpiring(ZooKeeperConnection zooKeeperConnection,
+                                              int poolSize,
+                                              String znode,
+                                              Long timeout)
             throws IOException {
-        return new ExpiringResourceClaim(zookeeper, poolSize, znode, timeout);
+
+        long timeoutNonNull = timeout == null ? DEFAULT_TIMEOUT : timeout;
+        logger.debug("Preparing expiring resource-claim; will release it in {}ms.", timeout);
+
+        return new ExpiringResourceClaim(zooKeeperConnection, poolSize, znode, timeoutNonNull);
     }
 }

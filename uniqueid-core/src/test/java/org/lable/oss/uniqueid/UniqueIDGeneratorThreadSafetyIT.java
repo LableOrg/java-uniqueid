@@ -46,7 +46,7 @@ public class UniqueIDGeneratorThreadSafetyIT {
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    IDGenerator generator = LocalUniqueIDGenerator.generatorFor(1, 1);
+                    IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(1, 1);
                     try {
                         for (int i = 0; i < iterationCount; i++) {
                             byte[] id = generator.generate();
@@ -89,7 +89,7 @@ public class UniqueIDGeneratorThreadSafetyIT {
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    IDGenerator generator = LocalUniqueIDGenerator.generatorFor(profile[0], profile[1]);
+                    IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(profile[0], profile[1]);
                     try {
                         for (int i = 0; i < iterationCount; i++) {
                             byte[] id = generator.generate();

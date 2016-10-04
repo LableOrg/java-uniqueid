@@ -17,6 +17,8 @@ package org.lable.oss.uniqueid;
 
 
 import org.junit.Test;
+import org.lable.oss.uniqueid.bytes.Blueprint;
+import org.lable.oss.uniqueid.bytes.IDBuilder;
 
 import java.util.Deque;
 
@@ -30,12 +32,25 @@ public class LocalUniqueIDGeneratorIT {
         final int GENERATOR_ID = 42;
         final int CLUSTER_ID = 7;
         final int BATCH_SIZE = 500;
-        IDGenerator generator = LocalUniqueIDGenerator.generatorFor(GENERATOR_ID, CLUSTER_ID);
+        IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(GENERATOR_ID, CLUSTER_ID);
 
         Deque<byte[]> stack = generator.batch(BATCH_SIZE);
         assertThat(stack.size(), is(BATCH_SIZE));
 
-        BaseUniqueIDGenerator.Blueprint blueprint = BaseUniqueIDGenerator.parse(stack.pop());
+        Blueprint blueprint = IDBuilder.parse(stack.pop());
+        assertThat(blueprint.getGeneratorId(), is(GENERATOR_ID));
+        assertThat(blueprint.getClusterId(), is(CLUSTER_ID));
+    }
+
+    @Test
+    public void highGeneratorIdTest() throws Exception {
+        final int GENERATOR_ID = 255;
+        final int CLUSTER_ID = 15;
+        IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(GENERATOR_ID, CLUSTER_ID);
+
+        byte[] id = generator.generate();
+
+        Blueprint blueprint = IDBuilder.parse(id);
         assertThat(blueprint.getGeneratorId(), is(GENERATOR_ID));
         assertThat(blueprint.getClusterId(), is(CLUSTER_ID));
     }

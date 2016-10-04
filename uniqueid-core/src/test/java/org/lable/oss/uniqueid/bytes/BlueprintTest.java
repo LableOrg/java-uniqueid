@@ -13,24 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.lable.oss.uniqueid.zookeeper;
+package org.lable.oss.uniqueid.bytes;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
-import java.io.IOException;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.core.IsNot.not;
+import static org.junit.Assert.assertThat;
 
-public class ZooKeeperConnectionTest {
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
+public class BlueprintTest {
     @Test
-    public void notConfiguredTest() throws IOException {
-        thrown.expect(RuntimeException.class);
-        thrown.expectMessage("ZooKeeper quorum addresses were never configured.");
-        ZooKeeperConnection.get();
+    public void toStringTest() {
+        Blueprint blueprint =
+                new Blueprint(System.currentTimeMillis(), 0, 0, 0);
+        assertThat(blueprint.toString(), is(notNullValue()));
+        assertThat(blueprint.toString().length(), is(not(0)));
     }
 }

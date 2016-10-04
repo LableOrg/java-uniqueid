@@ -29,8 +29,6 @@ public class ResourceTestPoolHelper {
      * Create the two znodes used for the queue and the resource pool.
      *
      * @param zookeeper ZooKeeper connection to use.
-     * @throws KeeperException
-     * @throws InterruptedException
      */
     public static void prepareEmptyQueueAndPool(ZooKeeper zookeeper, String znode)
             throws KeeperException, InterruptedException {
@@ -50,8 +48,6 @@ public class ResourceTestPoolHelper {
      *
      * @param zookeeper ZooKeeper connection to use.
      * @param clusterId Cluster ID to configure.
-     * @throws KeeperException
-     * @throws InterruptedException
      */
     public static void prepareClusterID(ZooKeeper zookeeper, String znode, int clusterId)
             throws KeeperException, InterruptedException {

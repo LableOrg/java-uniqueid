@@ -32,8 +32,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Singleton for a ZooKeeper connection object instance.
  */
-public enum ZooKeeperConnection {
-    INSTANCE;
+public class ZooKeeperConnection {
 
     final static Logger logger = LoggerFactory.getLogger(ZooKeeperConnection.class);
 
@@ -45,35 +44,31 @@ public enum ZooKeeperConnection {
     final Queue<ZooKeeperConnectionObserver> observers = new ConcurrentLinkedQueue<>();
 
     ZooKeeper zookeeper = null;
-    static String quorumAddresses = null;
 
-    /**
-     * Get the ZooKeeper connection object. If none exists, connect to the quorum and return the new object.
-     *
-     * @return The ZooKeeper object.
-     * @throws IOException Thrown when connecting to the ZooKeeper quorum fails.
-     */
-    public static ZooKeeper get() throws IOException {
-        if (quorumAddresses == null) {
-            throw new RuntimeException("ZooKeeper quorum addresses were never configured.");
-        }
-
-        if (INSTANCE.zookeeper == null) {
-            connect();
-        }
-
-        return INSTANCE.zookeeper;
+    public ZooKeeperConnection(ZooKeeper zookeeper) {
+        if (zookeeper == null) throw new IllegalArgumentException("ZooKeeper cannot be null.");
+        zookeeper.register(new ConnectionWatcher(this));
+        this.zookeeper = zookeeper;
     }
 
-    public static void shutdown() {
-        if (INSTANCE.zookeeper == null) return;
+    public ZooKeeperConnection(String quorumAddresses) throws IOException {
+        this.zookeeper = connect(quorumAddresses);
+        zookeeper.register(new ConnectionWatcher(this));
+    }
+
+    public ZooKeeper get() {
+        return zookeeper;
+    }
+
+    public void shutdown() {
+        if (zookeeper == null) return;
 
         try {
-            INSTANCE.zookeeper.close();
+            zookeeper.close();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {
-            INSTANCE.zookeeper = null;
+            zookeeper = null;
         }
     }
 
@@ -82,18 +77,15 @@ public enum ZooKeeperConnection {
      *
      * @throws IOException Thrown when connecting to the ZooKeeper quorum fails.
      */
-    private static void connect() throws IOException {
+    private ZooKeeper connect(String quorumAddresses) throws IOException {
         final CountDownLatch latch = new CountDownLatch(1);
         ZooKeeper zookeeper;
 
         // Connect to the quorum and wait for the successful connection callback.;
-        zookeeper = new ZooKeeper(quorumAddresses, (int) SECONDS.toMillis(10), new Watcher() {
-            @Override
-            public void process(WatchedEvent watchedEvent) {
-                if (watchedEvent.getState() == Event.KeeperState.SyncConnected) {
-                    // Signal that the Zookeeper connection is established.
-                    latch.countDown();
-                }
+        zookeeper = new ZooKeeper(quorumAddresses, (int) SECONDS.toMillis(10), watchedEvent -> {
+            if (watchedEvent.getState() == Watcher.Event.KeeperState.SyncConnected) {
+                // Signal that the Zookeeper connection is established.
+                latch.countDown();
             }
         });
 
@@ -108,17 +100,15 @@ public enum ZooKeeperConnection {
                     "Connection to ZooKeeper quorum timed out after %d seconds.", CONNECTION_TIMEOUT));
         }
 
-        zookeeper.register(new ConnectionWatcher());
-
-        INSTANCE.zookeeper = zookeeper;
+        return zookeeper;
     }
 
-    public static void registerObserver(ZooKeeperConnectionObserver observer) {
-        INSTANCE.observers.add(observer);
+    public void registerObserver(ZooKeeperConnectionObserver observer) {
+        observers.add(observer);
     }
 
-    public static void deregisterObserver(ZooKeeperConnectionObserver observer) {
-        INSTANCE.observers.remove(observer);
+    public void deregisterObserver(ZooKeeperConnectionObserver observer) {
+        observers.remove(observer);
     }
 
     /**
@@ -127,37 +117,30 @@ public enum ZooKeeperConnection {
      * This method should be called when the connection to the ZooKeeper is expired, so a subsequent call to
      * {@link #get()} will establish a new connection.
      */
-    public static void reset() {
-        INSTANCE.zookeeper = null;
-    }
-
-    /**
-     * Configure the ZooKeeper quorum addresses.
-     *
-     * @param quorumAddresses The server address string expected by {@link org.apache.zookeeper.ZooKeeper}.
-     */
-    public static void configure(String quorumAddresses) {
-        ZooKeeperConnection.quorumAddresses = quorumAddresses;
+    public void reset() {
+        zookeeper = null;
     }
 
     static class ConnectionWatcher implements Watcher {
+
+        private final ZooKeeperConnection zooKeeperConnection;
+
+        public ConnectionWatcher(ZooKeeperConnection zooKeeperConnection) {
+            this.zooKeeperConnection = zooKeeperConnection;
+        }
 
         @Override
         public void process(WatchedEvent event) {
             switch (event.getState()) {
                 case Disconnected:
                     logger.warn("Disconnected from ZooKeeper quorum.");
-                    for (ZooKeeperConnectionObserver observer : INSTANCE.observers) {
-                        observer.disconnected();
-                    }
+                    zooKeeperConnection.observers.forEach(ZooKeeperConnectionObserver::disconnected);
                     break;
                 case Expired:
-                    ZooKeeperConnection.reset();
+                    zooKeeperConnection.reset();
                     break;
                 case SyncConnected:
-                    for (ZooKeeperConnectionObserver observer : INSTANCE.observers) {
-                        observer.connected();
-                    }
+                    zooKeeperConnection.observers.forEach(ZooKeeperConnectionObserver::connected);
                     break;
                 case AuthFailed:
                 case ConnectedReadOnly:

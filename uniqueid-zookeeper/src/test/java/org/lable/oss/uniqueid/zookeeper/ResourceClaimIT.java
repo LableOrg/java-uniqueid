@@ -16,9 +16,7 @@
 package org.lable.oss.uniqueid.zookeeper;
 
 
-import org.apache.zookeeper.ZooKeeper;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
@@ -47,19 +45,19 @@ public class ResourceClaimIT {
     @Rule
     public ZooKeeperInstance zkInstance = new ZooKeeperInstance();
 
+    ZooKeeperConnection zookeeperConnection;
+
     @Before
     public void before() throws Exception {
         zookeeperQuorum = zkInstance.getQuorumAddresses();
-        ZooKeeperConnection.configure(zookeeperQuorum);
-        ZooKeeper zookeeper = zkInstance.getZookeeperConnection();
-        prepareClusterID(zookeeper, znode, 3);
-        prepareEmptyQueueAndPool(zookeeper, znode);
-        ZooKeeperConnection.reset();
+        zookeeperConnection = new ZooKeeperConnection(zkInstance.getZookeeperConnection());
+        prepareClusterID(zookeeperConnection.get(), znode, 3);
+        prepareEmptyQueueAndPool(zookeeperConnection.get(), znode);
     }
 
     @Test
     public void claimTest() throws Exception {
-        ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), 2, znode);
+        ResourceClaim claim = ResourceClaim.claim(zookeeperConnection, 2, znode);
         int resource = claim.get();
         assertThat(resource, is(both(greaterThanOrEqualTo(0)).and(lessThan(2))));
     }
@@ -76,19 +74,16 @@ public class ResourceClaimIT {
 
         for (int i = 0; i < threadCount; i++) {
             final Integer number = 10 + i;
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    ready.countDown();
-                    try {
-                        start.await();
-                        ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize, znode);
-                        result.put(number, claim.get());
-                    } catch (IOException | InterruptedException e) {
-                        fail();
-                    }
-                    done.countDown();
+            new Thread(() -> {
+                ready.countDown();
+                try {
+                    start.await();
+                    ResourceClaim claim = ResourceClaim.claim(zookeeperConnection, poolSize, znode);
+                    result.put(number, claim.get());
+                } catch (IOException | InterruptedException e) {
+                    fail();
                 }
+                done.countDown();
             }, String.valueOf(number)).start();
         }
 
@@ -115,20 +110,17 @@ public class ResourceClaimIT {
 
         for (int i = 0; i < threadCount; i++) {
             final Integer number = 10 + i;
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    ready.countDown();
-                    try {
-                        start.await();
-                        ResourceClaim claim = ResourceClaim.claim(ZooKeeperConnection.get(), poolSize, znode);
-                        result.put(number, claim.get());
-                        claim.close();
-                    } catch (IOException | InterruptedException e) {
-                        fail();
-                    }
-                    done.countDown();
+            new Thread(() -> {
+                ready.countDown();
+                try {
+                    start.await();
+                    ResourceClaim claim = ResourceClaim.claim(zookeeperConnection, poolSize, znode);
+                    result.put(number, claim.get());
+                    claim.close();
+                } catch (IOException | InterruptedException e) {
+                    fail();
                 }
+                done.countDown();
             }, String.valueOf(number)).start();
         }
 
@@ -141,12 +133,5 @@ public class ResourceClaimIT {
         Set<Integer> allResources = new HashSet<>();
         allResources.addAll(result.values());
         assertThat(allResources.size(), is(1));
-    }
-
-    @Test
-    @Ignore
-    public void testAgainstRealQuorum() throws Exception {
-        ZooKeeperConnection.configure("zka,zkb,zkc");
-        claimTest();
     }
 }

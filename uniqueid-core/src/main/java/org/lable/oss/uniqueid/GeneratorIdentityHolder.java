@@ -15,21 +15,9 @@
  */
 package org.lable.oss.uniqueid;
 
-import org.apache.commons.codec.binary.Hex;
-import org.junit.Test;
-import org.lable.oss.uniqueid.bytes.Blueprint;
-import org.lable.oss.uniqueid.bytes.IDBuilder;
+import java.io.Closeable;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.core.IsNot.not;
-import static org.junit.Assert.assertThat;
-
-public class BaseUniqueIDGeneratorTest {
-
-    /*
-     * Byte mangling tests.
-     */
-
-
+public interface GeneratorIdentityHolder extends Closeable {
+    int getClusterId() throws GeneratorException;
+    int getGeneratorId() throws GeneratorException;
 }

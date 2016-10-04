@@ -36,9 +36,9 @@ public class ClusterID {
      *
      * @param zookeeper ZooKeeper instance to work with.
      * @return The cluster ID, if configured in the quorum.
-     * @throws IOException                     Thrown when retrieving the ID fails.
-     * @throws java.lang.NumberFormatException Thrown when the supposed ID found in the quorum could not be parsed as
-     *                                         an integer.
+     * @throws IOException           Thrown when retrieving the ID fails.
+     * @throws NumberFormatException Thrown when the supposed ID found in the quorum could not be parsed as
+     *                               an integer.
      */
     public static int get(ZooKeeper zookeeper, String znode) throws IOException {
         try {

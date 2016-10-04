@@ -18,7 +18,6 @@ package org.lable.oss.uniqueid.zookeeper;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.Rule;
 import org.junit.Test;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -38,7 +37,6 @@ public class ClusterIDIT {
         int id = ClusterID.get(zookeeper, "/some-path");
         assertThat(id, is(CLUSTER_ID));
 
-        ZooKeeperConnection.reset();
     }
 
     @Test
@@ -47,7 +45,5 @@ public class ClusterIDIT {
 
         int id = ClusterID.get(zookeeper, "/some-path");
         assertThat(id, is(ClusterID.DEFAULT_CLUSTER_ID));
-
-        ZooKeeperConnection.reset();
     }
 }
