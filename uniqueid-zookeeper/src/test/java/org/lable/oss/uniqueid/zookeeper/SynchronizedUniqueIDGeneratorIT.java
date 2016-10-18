@@ -48,7 +48,7 @@ public class SynchronizedUniqueIDGeneratorIT {
 
     @BeforeClass
     public static void before() throws Exception {
-        zooKeeperConnection = new ZooKeeperConnection(zkInstance.getZookeeperConnection());
+        zooKeeperConnection = new ZooKeeperConnection(zkInstance.getQuorumAddresses());
         ResourceTestPoolHelper.prepareEmptyQueueAndPool(zooKeeperConnection.get(), znode);
         ResourceTestPoolHelper.prepareClusterID(zooKeeperConnection.get(), znode, CLUSTER_ID);
     }

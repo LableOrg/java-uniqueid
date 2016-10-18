@@ -50,7 +50,7 @@ public class ResourceClaimIT {
     @Before
     public void before() throws Exception {
         zookeeperQuorum = zkInstance.getQuorumAddresses();
-        zookeeperConnection = new ZooKeeperConnection(zkInstance.getZookeeperConnection());
+        zookeeperConnection = new ZooKeeperConnection(zkInstance.getQuorumAddresses());
         prepareClusterID(zookeeperConnection.get(), znode, 3);
         prepareEmptyQueueAndPool(zookeeperConnection.get(), znode);
     }

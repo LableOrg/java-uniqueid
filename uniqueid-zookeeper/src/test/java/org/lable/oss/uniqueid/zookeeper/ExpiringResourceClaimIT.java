@@ -43,7 +43,7 @@ public class ExpiringResourceClaimIT {
 
     @BeforeClass
     public static void before() throws IOException, KeeperException, InterruptedException {
-        zookeeperConnection = new ZooKeeperConnection(zkInstance.getZookeeperConnection());
+        zookeeperConnection = new ZooKeeperConnection(zkInstance.getQuorumAddresses());
         ResourceTestPoolHelper.prepareEmptyQueueAndPool(zkInstance.getZookeeperConnection(), znode);
         ResourceTestPoolHelper.prepareClusterID(zkInstance.getZookeeperConnection(), znode, 0);
     }

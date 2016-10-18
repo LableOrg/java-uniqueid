@@ -48,7 +48,7 @@ public class MultipleGeneratorsIT {
 
     @BeforeClass
     public static void before() throws Exception {
-        zookeeperConnection = new ZooKeeperConnection(zkInstance.getZookeeperConnection());
+        zookeeperConnection = new ZooKeeperConnection(zkInstance.getQuorumAddresses());
 
         ResourceTestPoolHelper.prepareEmptyQueueAndPool(zookeeperConnection.get(), znodeA);
         ResourceTestPoolHelper.prepareClusterID(zookeeperConnection.get(), znodeA, CLUSTER_ID);

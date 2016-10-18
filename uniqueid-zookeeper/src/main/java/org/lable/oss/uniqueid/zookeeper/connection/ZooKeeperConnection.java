@@ -42,21 +42,20 @@ public class ZooKeeperConnection {
     final static int CONNECTION_TIMEOUT = 10;
 
     final Queue<ZooKeeperConnectionObserver> observers = new ConcurrentLinkedQueue<>();
+    final String quorumAddresses;
 
     ZooKeeper zookeeper = null;
 
-    public ZooKeeperConnection(ZooKeeper zookeeper) {
-        if (zookeeper == null) throw new IllegalArgumentException("ZooKeeper cannot be null.");
-        zookeeper.register(new ConnectionWatcher(this));
-        this.zookeeper = zookeeper;
-    }
-
     public ZooKeeperConnection(String quorumAddresses) throws IOException {
         this.zookeeper = connect(quorumAddresses);
+        this.quorumAddresses = quorumAddresses;
         zookeeper.register(new ConnectionWatcher(this));
     }
 
-    public ZooKeeper get() {
+    public ZooKeeper get() throws IOException {
+        if (zookeeper == null) {
+            zookeeper = connect(quorumAddresses);
+        }
         return zookeeper;
     }
 
