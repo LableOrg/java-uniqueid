@@ -69,17 +69,20 @@ public class MultipleGeneratorsIT {
 
         for (int i = 0; i < threadCount; i++) {
             final Integer number = 10 + i;
-            new Thread(() -> {
-                ready.countDown();
-                try {
-                    start.await();
-                    String znode = number % 2 == 0 ? znodeA : znodeB;
-                    IDGenerator generator = generatorFor(zookeeperConnection, znode);
-                    result.put(number, generator.batch(batchSize));
-                } catch (IOException | InterruptedException | GeneratorException e) {
-                    fail();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    ready.countDown();
+                    try {
+                        start.await();
+                        String znode = number % 2 == 0 ? znodeA : znodeB;
+                        IDGenerator generator = generatorFor(zookeeperConnection, znode);
+                        result.put(number, generator.batch(batchSize));
+                    } catch (IOException | InterruptedException | GeneratorException e) {
+                        fail();
+                    }
+                    done.countDown();
                 }
-                done.countDown();
             }, String.valueOf(number)).start();
         }
 

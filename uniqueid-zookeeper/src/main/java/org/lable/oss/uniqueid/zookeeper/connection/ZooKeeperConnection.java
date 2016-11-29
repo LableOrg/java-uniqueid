@@ -81,10 +81,13 @@ public class ZooKeeperConnection {
         ZooKeeper zookeeper;
 
         // Connect to the quorum and wait for the successful connection callback.;
-        zookeeper = new ZooKeeper(quorumAddresses, (int) SECONDS.toMillis(10), watchedEvent -> {
-            if (watchedEvent.getState() == Watcher.Event.KeeperState.SyncConnected) {
-                // Signal that the Zookeeper connection is established.
-                latch.countDown();
+        zookeeper = new ZooKeeper(quorumAddresses, (int) SECONDS.toMillis(10), new Watcher() {
+            @Override
+            public void process(WatchedEvent watchedEvent) {
+                if (watchedEvent.getState() == Watcher.Event.KeeperState.SyncConnected) {
+                    // Signal that the Zookeeper connection is established.
+                    latch.countDown();
+                }
             }
         });
 
@@ -133,13 +136,17 @@ public class ZooKeeperConnection {
             switch (event.getState()) {
                 case Disconnected:
                     logger.warn("Disconnected from ZooKeeper quorum.");
-                    zooKeeperConnection.observers.forEach(ZooKeeperConnectionObserver::disconnected);
+                    for (ZooKeeperConnectionObserver observer : zooKeeperConnection.observers) {
+                        observer.disconnected();
+                    }
                     break;
                 case Expired:
                     zooKeeperConnection.reset();
                     break;
                 case SyncConnected:
-                    zooKeeperConnection.observers.forEach(ZooKeeperConnectionObserver::connected);
+                    for (ZooKeeperConnectionObserver observer : zooKeeperConnection.observers) {
+                        observer.connected();
+                    }
                     break;
                 case AuthFailed:
                 case ConnectedReadOnly:

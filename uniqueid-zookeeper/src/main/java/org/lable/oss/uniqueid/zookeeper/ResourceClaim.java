@@ -275,9 +275,12 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
         }
 
         final CountDownLatch latch = new CountDownLatch(1);
-        Stat stat = zookeeper.exists(lockNode + "/" + placeBeforeUs, event -> {
-            // If *anything* changes, reevaluate our position in the queue.
-            latch.countDown();
+        Stat stat = zookeeper.exists(lockNode + "/" + placeBeforeUs, new Watcher() {
+            @Override
+            public void process(WatchedEvent event) {
+                // If *anything* changes, reevaluate our position in the queue.
+                latch.countDown();
+            }
         });
 
         // If stat is null, the znode in front of use got deleted during our inspection of the queue. If that happens,
@@ -334,7 +337,12 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
             logger.debug("No resources available at the moment (pool size: {}), waiting.", poolSize);
             // No resources available. Wait for a resource to become available.
             final CountDownLatch latch = new CountDownLatch(1);
-            zookeeper.getChildren(poolNode, event -> latch.countDown());
+            zookeeper.getChildren(poolNode, new Watcher() {
+                @Override
+                public void process(WatchedEvent event) {
+                    latch.countDown();
+                }
+            });
             latch.await();
             return claimResource(zookeeper, poolNode, poolSize);
         }
@@ -362,11 +370,14 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
                     }
                 }
 
-                zookeeper.exists(node, event -> {
-                    if (event.getType() == EventType.NodeDeleted) {
-                        // Invalidate our claim when the node is deleted by some other process.
-                        logger.debug("Resource-claim node unexpectedly deleted ({})", resource);
-                        close(true);
+                zookeeper.exists(node, new Watcher() {
+                    @Override
+                    public void process(WatchedEvent event) {
+                        if (event.getType() == EventType.NodeDeleted) {
+                            // Invalidate our claim when the node is deleted by some other process.
+                            logger.debug("Resource-claim node unexpectedly deleted ({})", resource);
+                            ResourceClaim.this.close(true);
+                        }
                     }
                 });
 

@@ -16,6 +16,7 @@
 package org.lable.oss.uniqueid.zookeeper;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ServerConfig;
@@ -71,10 +72,13 @@ public class ZooKeeperInstance extends ExternalResource {
         final CountDownLatch latch = new CountDownLatch(1);
 
         // Connect to the quorum and wait for the successful connection callback.
-        zookeeper = new ZooKeeper(zookeeperHost, (int) TimeUnit.SECONDS.toMillis(10), watchedEvent -> {
-            if (watchedEvent.getState() == Watcher.Event.KeeperState.SyncConnected) {
-                // Signal that the Zookeeper connection is established.
-                latch.countDown();
+        zookeeper = new ZooKeeper(zookeeperHost, (int) TimeUnit.SECONDS.toMillis(10), new Watcher() {
+            @Override
+            public void process(WatchedEvent watchedEvent) {
+                if (watchedEvent.getState() == Watcher.Event.KeeperState.SyncConnected) {
+                    // Signal that the Zookeeper connection is established.
+                    latch.countDown();
+                }
             }
         });
 

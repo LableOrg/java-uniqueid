@@ -28,11 +28,21 @@ public class SynchronizedGeneratorIdentityTest {
     @Test
     public void getDurationInMillisNullTest() {
         assertThat(getDurationInMillis(null), is(nullValue()));
-        assertThat(getDurationInMillis(() -> null), is(nullValue()));
+        assertThat(getDurationInMillis(new DurationSupplier() {
+            @Override
+            public Long get() {
+                return null;
+            }
+        }), is(nullValue()));
     }
 
     @Test
     public void getDurationInMillisTest() {
-        assertThat(getDurationInMillis(() -> Duration.ofHours(1)), is(3_600_000L));
+        assertThat(getDurationInMillis(new DurationSupplier() {
+            @Override
+            public Long get() {
+                return 3_600_000L;
+            }
+        }), is(3_600_000L));
     }
 }

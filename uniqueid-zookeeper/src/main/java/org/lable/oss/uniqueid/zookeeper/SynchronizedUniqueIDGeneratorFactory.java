@@ -76,7 +76,9 @@ public class SynchronizedUniqueIDGeneratorFactory {
         String instanceKey = synchronizedGeneratorIdentity.getZNode();
         if (!instances.containsKey(instanceKey)) {
             logger.debug("Creating new instance.");
-            instances.putIfAbsent(instanceKey, new BaseUniqueIDGenerator(synchronizedGeneratorIdentity));
+            if (!instances.containsKey(instanceKey)) {
+                instances.put(instanceKey, new BaseUniqueIDGenerator(synchronizedGeneratorIdentity));
+            }
         }
         return instances.get(instanceKey);
     }

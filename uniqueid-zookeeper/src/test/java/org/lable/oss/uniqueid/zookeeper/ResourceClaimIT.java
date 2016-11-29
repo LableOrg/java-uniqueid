@@ -74,16 +74,19 @@ public class ResourceClaimIT {
 
         for (int i = 0; i < threadCount; i++) {
             final Integer number = 10 + i;
-            new Thread(() -> {
-                ready.countDown();
-                try {
-                    start.await();
-                    ResourceClaim claim = ResourceClaim.claim(zookeeperConnection, poolSize, znode);
-                    result.put(number, claim.get());
-                } catch (IOException | InterruptedException e) {
-                    fail();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    ready.countDown();
+                    try {
+                        start.await();
+                        ResourceClaim claim = ResourceClaim.claim(zookeeperConnection, poolSize, znode);
+                        result.put(number, claim.get());
+                    } catch (IOException | InterruptedException e) {
+                        fail();
+                    }
+                    done.countDown();
                 }
-                done.countDown();
             }, String.valueOf(number)).start();
         }
 
@@ -110,17 +113,20 @@ public class ResourceClaimIT {
 
         for (int i = 0; i < threadCount; i++) {
             final Integer number = 10 + i;
-            new Thread(() -> {
-                ready.countDown();
-                try {
-                    start.await();
-                    ResourceClaim claim = ResourceClaim.claim(zookeeperConnection, poolSize, znode);
-                    result.put(number, claim.get());
-                    claim.close();
-                } catch (IOException | InterruptedException e) {
-                    fail();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    ready.countDown();
+                    try {
+                        start.await();
+                        ResourceClaim claim = ResourceClaim.claim(zookeeperConnection, poolSize, znode);
+                        result.put(number, claim.get());
+                        claim.close();
+                    } catch (IOException | InterruptedException e) {
+                        fail();
+                    }
+                    done.countDown();
                 }
-                done.countDown();
             }, String.valueOf(number)).start();
         }
 
