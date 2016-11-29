@@ -11,6 +11,11 @@ When you want to assign unique identifiers to database records in a distributed 
 environment that are short and guaranteed to be unique (within your data realm), this
 library can provide them.
 
+## Versions
+
+For Java 8 and newer, please use the `2.x` series of releases. For Java 7 version `1.14` may be
+used.
+
 ## Local usage
 
 If you have a computing environment where you know exactly which processes may generate IDs.
