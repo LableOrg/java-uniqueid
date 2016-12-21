@@ -136,7 +136,9 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
 
     @Override
     public void close() throws IOException {
-        resourceClaim.close();
+        if (resourceClaim != null) {
+            resourceClaim.close();
+        }
     }
 
     static Long getDurationInMillis(Supplier<Duration> durationSupplier) {
