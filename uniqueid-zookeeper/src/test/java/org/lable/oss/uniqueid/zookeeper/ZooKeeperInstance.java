@@ -59,7 +59,7 @@ public class ZooKeeperInstance extends ExternalResource {
     }
 
     @Override
-    protected void before() throws Throwable {
+    public void before() throws Throwable {
         tempFolder = createTempDir();
         String zookeeperHost = "localhost:" + serverPort;
         ServerConfig config = new ServerConfig();
@@ -87,7 +87,7 @@ public class ZooKeeperInstance extends ExternalResource {
     }
 
     @Override
-    protected void after() {
+    public void after() {
         zkThread.shutdown();
         removeTempDir(tempFolder);
     }

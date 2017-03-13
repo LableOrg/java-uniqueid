@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -41,6 +42,8 @@ public class ZooKeeperConnection {
      */
     final static int CONNECTION_TIMEOUT = 10;
 
+    final static int CONNECTION_RETRY_LIMIT = 3;
+
     final Queue<ZooKeeperConnectionObserver> observers = new ConcurrentLinkedQueue<>();
     final String quorumAddresses;
 
@@ -52,11 +55,82 @@ public class ZooKeeperConnection {
         zookeeper.register(new ConnectionWatcher(this));
     }
 
-    public ZooKeeper get() throws IOException {
-        if (zookeeper == null) {
-            zookeeper = connect(quorumAddresses);
+    /**
+     * Get a connection to the ZooKeeper quorum that is guaranteed to be in a connected state. If this fails, an
+     * {@link IOException} is thrown.
+     *
+     * @return An active connection to the ZooKeeper quorum.
+     */
+    public synchronized ZooKeeper getActiveConnection() throws IOException {
+        if (!isConnected(zookeeper)) {
+            reset();
+            return get();
         }
         return zookeeper;
+    }
+
+    /**
+     * Get the connection to the ZooKeeper quorum maintained by this class. There is no guarantee that it is in a
+     * connected state (use {@link #getActiveConnection()} if you require this guarantee).
+     *
+     * @return A connection to the ZooKeeper quorum.
+     */
+    public synchronized ZooKeeper get() throws IOException {
+        if (zookeeper == null) {
+            attemptConnection(CONNECTION_RETRY_LIMIT);
+        }
+        return zookeeper;
+    }
+
+    private void attemptConnection(int tries) throws IOException {
+        attemptConnection(tries, tries);
+    }
+
+    private void attemptConnection(int tries, int triesRemaining) throws IOException {
+        if (triesRemaining <= 0) throw new IOException(
+                String.format("Failed to (re)connect to ZooKeeper quorum after %d tries.", tries)
+        );
+
+        logger.info("Attempting to (re)connect to ZooKeeper quorum ({} tries remaining).", triesRemaining);
+
+        triesRemaining--;
+
+        zookeeper = connect(quorumAddresses);
+        if (!isConnected(zookeeper)) {
+            attemptConnection(triesRemaining);
+        }
+    }
+
+    static boolean isConnected(ZooKeeper zookeeper) {
+        if (zookeeper == null) return false;
+
+        // If the connection to the ZooKeeper is in a reconnecting state, wait at most 5 × 5 seconds for it to
+        // resolve the connection on its own. After that, consider the connection broken.
+        for (int i = 0; i < 5; i++) {
+            switch (zookeeper.getState()) {
+                case CONNECTING:
+                case ASSOCIATING:
+                    logger.warn(
+                            "Establishing (or re-establishing) connection to ZooKeeper quorum. " +
+                            " Patiently waiting a bit ({})…", i + 1
+                    );
+                    try {
+                        TimeUnit.SECONDS.sleep(5);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    break;
+                case CONNECTED:
+                case CONNECTEDREADONLY:
+                    return true;
+                case CLOSED:
+                case AUTH_FAILED:
+                case NOT_CONNECTED:
+                    return false;
+            }
+        }
+
+        return false;
     }
 
     public void shutdown() {
