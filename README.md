@@ -13,7 +13,7 @@ library can provide them.
 
 ## Versions
 
-For Java 8 and newer, please use the `2.x` series of releases. For Java 7 version `1.14` may be
+For Java 8 and newer, please use the `2.x` series of releases. For Java 7 version `1.x` may be
 used.
 
 ## Local usage
