@@ -52,7 +52,7 @@ public class SynchronizedUniqueIDGeneratorFactory {
             throws IOException {
 
         if (!instances.containsKey(znode)) {
-            final int clusterId = ClusterID.get(zooKeeperConnection.get(), znode);
+            final int clusterId = ClusterID.get(zooKeeperConnection.getActiveConnection(), znode);
             SynchronizedGeneratorIdentity generatorIdentityHolder =
                     new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, null);
 

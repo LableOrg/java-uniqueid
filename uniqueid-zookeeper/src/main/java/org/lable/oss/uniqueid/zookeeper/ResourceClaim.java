@@ -62,7 +62,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
         zooKeeperConnection.registerObserver(this);
         this.poolSize = poolSize;
         this.zooKeeperConnection = zooKeeperConnection;
-        this.zookeeper = zooKeeperConnection.get();
+        this.zookeeper = zooKeeperConnection.getActiveConnection();
 
         if (zookeeper.getState() != ZooKeeper.States.CONNECTED) {
             throw new IOException("Not connected to ZooKeeper quorum.");

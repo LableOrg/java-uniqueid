@@ -66,7 +66,7 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
                                                         Supplier<Duration> claimDurationSupplier)
             throws IOException {
         ZooKeeperConnection zooKeeperConnection = new ZooKeeperConnection(quorum);
-        int clusterId = ClusterID.get(zooKeeperConnection.get(), znode);
+        int clusterId = ClusterID.get(zooKeeperConnection.getActiveConnection(), znode);
 
         return new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, claimDurationSupplier);
     }
@@ -84,7 +84,7 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
                                                         Long claimDuration)
             throws IOException {
         ZooKeeperConnection zooKeeperConnection = new ZooKeeperConnection(quorum);
-        int clusterId = ClusterID.get(zooKeeperConnection.get(), znode);
+        int clusterId = ClusterID.get(zooKeeperConnection.getActiveConnection(), znode);
         Supplier<Duration> durationSupplier = () -> Duration.ofMillis(claimDuration);
 
         return new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, durationSupplier);
