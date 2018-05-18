@@ -16,11 +16,9 @@
 package org.lable.oss.uniqueid.bytes;
 
 import org.apache.commons.codec.binary.Hex;
-import org.hamcrest.CoreMatchers;
 import org.junit.Test;
-import org.lable.oss.uniqueid.BaseUniqueIDGenerator;
 
-import static org.hamcrest.core.Is.is;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.lable.oss.uniqueid.bytes.IDBuilder.parseGeneratorId;
 
@@ -31,7 +29,7 @@ public class IDBuilderTest {
         final byte[] zero = new byte[8];
 
         // Baseline check, if all ID parts are zero so is the result.
-        assertThat(result, CoreMatchers.is(zero));
+        assertThat(result, is(zero));
     }
 
     @Test
@@ -40,13 +38,14 @@ public class IDBuilderTest {
                 Blueprint.MAX_TIMESTAMP,
                 Blueprint.MAX_SEQUENCE_COUNTER,
                 Blueprint.MAX_GENERATOR_ID,
-                Blueprint.MAX_CLUSTER_ID
+                Blueprint.MAX_CLUSTER_ID,
+                Mode.SPREAD
         ));
-        // The "0f" for the 7th byte is due to the reserved bits that are (for now) always zero.
+        // The "0f" for the 7th byte is due to the reserved bits that are always zero for the SPREAD mode.
         final String expected = "ffffffffffff0fff";
 
         // Baseline check, if all ID parts are all ones so is the result (except for the reserved bytes).
-        assertThat(Hex.encodeHexString(result), CoreMatchers.is(expected));
+        assertThat(Hex.encodeHexString(result), is(expected));
     }
 
     @Test
@@ -57,7 +56,7 @@ public class IDBuilderTest {
 
         // Timestamp test.
         final byte[] result_a = IDBuilder.build(new Blueprint(TEST_TS_A, 0, 0, 0));
-        assertThat(Hex.encodeHexString(result_a).toLowerCase(), CoreMatchers.is(TEST_A_REVERSED));
+        assertThat(Hex.encodeHexString(result_a).toLowerCase(), is(TEST_A_REVERSED));
 
         final long TEST_TS_B = 0x3FFFFFFFDL;
         // This is the above long with its bytes reversed.
@@ -65,7 +64,7 @@ public class IDBuilderTest {
 
         // Timestamp test.
         final byte[] result_b = IDBuilder.build(new Blueprint(TEST_TS_B, 0, 0, 0));
-        assertThat(Hex.encodeHexString(result_b).toLowerCase(), CoreMatchers.is(TEST_B_REVERSED));
+        assertThat(Hex.encodeHexString(result_b).toLowerCase(), is(TEST_B_REVERSED));
     }
 
     @Test
@@ -75,7 +74,7 @@ public class IDBuilderTest {
         final byte[] sixthByte = new byte[]{result[5]};
         // 0x88 is 0x22 shifted left two bits.
         final String expected = "22";
-        assertThat(Hex.encodeHexString(sixthByte), CoreMatchers.is(expected));
+        assertThat(Hex.encodeHexString(sixthByte), is(expected));
     }
 
     @Test
@@ -85,7 +84,7 @@ public class IDBuilderTest {
         final byte[] lastTwoBytes = new byte[]{result[6], result[7]};
         // 0x0270 is 0x0027 shifted left four bits.
         final String expected = "0270";
-        assertThat(Hex.encodeHexString(lastTwoBytes), CoreMatchers.is(expected));
+        assertThat(Hex.encodeHexString(lastTwoBytes), is(expected));
     }
 
     @Test
@@ -94,7 +93,34 @@ public class IDBuilderTest {
         final byte[] result = IDBuilder.build(new Blueprint(0, 0, 0, 5));
         final byte[] lastTwoBytes = new byte[]{result[6], result[7]};
         final String expected = "0005";
-        assertThat(Hex.encodeHexString(lastTwoBytes), CoreMatchers.is(expected));
+        assertThat(Hex.encodeHexString(lastTwoBytes), is(expected));
+    }
+
+    @Test
+    public void buildModeOnlySpread() {
+        // Cluster ID test.
+        final byte[] result = IDBuilder.build(new Blueprint(0, 0, 0, 0));
+        final byte[] lastTwoBytes = new byte[]{result[6], result[7]};
+        final String expected = "0000";
+        assertThat(Hex.encodeHexString(lastTwoBytes), is(expected));
+    }
+
+    @Test
+    public void buildModeOnlySpreadExplicit() {
+        // Cluster ID test.
+        final byte[] result = IDBuilder.build(new Blueprint(0, 0, 0, 0, Mode.SPREAD));
+        final byte[] lastTwoBytes = new byte[]{result[6], result[7]};
+        final String expected = "0000";
+        assertThat(Hex.encodeHexString(lastTwoBytes), is(expected));
+    }
+
+    @Test
+    public void buildModeOnlyTimeExplicit() {
+        // Cluster ID test.
+        final byte[] result = IDBuilder.build(new Blueprint(0, 0, 0, 0, Mode.TIME_SEQUENTIAL));
+        final byte[] lastTwoBytes = new byte[]{result[6], result[7]};
+        final String expected = "1000";
+        assertThat(Hex.encodeHexString(lastTwoBytes), is(expected));
     }
 
     @Test
@@ -107,27 +133,46 @@ public class IDBuilderTest {
         assertThat(IDBuilder.parseClusterId(resultOne), is(5));
         assertThat(IDBuilder.parseSequenceId(resultOne), is(10));
         assertThat(IDBuilder.parseTimestamp(resultOne), is(TEST_TS));
+        assertThat(IDBuilder.parseMode(resultOne), is(Mode.SPREAD));
 
         Blueprint blueprint = IDBuilder.parse(resultOne);
 
         final byte[] result_two = IDBuilder.build(blueprint);
-        assertThat(resultOne, CoreMatchers.is(result_two));
+        assertThat(resultOne, is(result_two));
     }
 
     @Test
-    public void blueprint() {
+    public void parseBytesTimeSequential() {
+        // Create an ID, then un-mangle it, and run the resulting blueprint through the mangler again.
+        final long TEST_TS = 143062936275L;
+        final byte[] resultOne = IDBuilder.build(new Blueprint(TEST_TS, 10, 2, 5, Mode.TIME_SEQUENTIAL));
+
+        assertThat(IDBuilder.parseGeneratorId(resultOne), is(2));
+        assertThat(IDBuilder.parseClusterId(resultOne), is(5));
+        assertThat(IDBuilder.parseSequenceId(resultOne), is(10));
+        assertThat(IDBuilder.parseTimestamp(resultOne), is(TEST_TS));
+        assertThat(IDBuilder.parseMode(resultOne), is(Mode.TIME_SEQUENTIAL));
+
+        Blueprint blueprint = IDBuilder.parse(resultOne);
+
+        final byte[] result_two = IDBuilder.build(blueprint);
+        assertThat(resultOne, is(result_two));
+    }
+
+    @Test
+    public void blueprintSpread() {
         // Round-trip test. First generate the byte[] with mangleBytes, then back to the blueprint with Blueprint.parse.
 
         final long TEST_TS = 143062936275L;
         final byte[] resultOne = IDBuilder.build(new Blueprint(TEST_TS, 10, 1, 5));
         final Blueprint blueprintOne = IDBuilder.parse(resultOne);
         final byte[] resultOneAgain = IDBuilder.build(blueprintOne);
-        assertThat(resultOne, CoreMatchers.is(resultOneAgain));
+        assertThat(resultOne, is(resultOneAgain));
 
         final byte[] resultZeros = IDBuilder.build(new Blueprint(0, 0, 0, 0));
         final Blueprint blueprintZeros = IDBuilder.parse(resultZeros);
         final byte[] resultZerosAgain = IDBuilder.build(blueprintZeros);
-        assertThat(resultZeros, CoreMatchers.is(resultZerosAgain));
+        assertThat(resultZeros, is(resultZerosAgain));
 
         final byte[] resultMostlyOnes = IDBuilder.build(new Blueprint(
                 Blueprint.MAX_TIMESTAMP,
@@ -137,7 +182,34 @@ public class IDBuilderTest {
         ));
         final Blueprint blueprintMostlyOnes = IDBuilder.parse(resultMostlyOnes);
         final byte[] resultMostlyOnesAgain = IDBuilder.build(blueprintMostlyOnes);
-        assertThat(resultMostlyOnes, CoreMatchers.is(resultMostlyOnesAgain));
+        assertThat(resultMostlyOnes, is(resultMostlyOnesAgain));
+    }
+
+    @Test
+    public void blueprintTimeSequential() {
+        // Round-trip test. First generate the byte[] with mangleBytes, then back to the blueprint with Blueprint.parse.
+
+        final long TEST_TS = 143062936275L;
+        final byte[] resultOne = IDBuilder.build(new Blueprint(TEST_TS, 10, 1, 5, Mode.TIME_SEQUENTIAL));
+        final Blueprint blueprintOne = IDBuilder.parse(resultOne);
+        final byte[] resultOneAgain = IDBuilder.build(blueprintOne);
+        assertThat(resultOne, is(resultOneAgain));
+
+        final byte[] resultZeros = IDBuilder.build(new Blueprint(0, 0, 0, 0, Mode.TIME_SEQUENTIAL));
+        final Blueprint blueprintZeros = IDBuilder.parse(resultZeros);
+        final byte[] resultZerosAgain = IDBuilder.build(blueprintZeros);
+        assertThat(resultZeros, is(resultZerosAgain));
+
+        final byte[] resultMostlyOnes = IDBuilder.build(new Blueprint(
+                Blueprint.MAX_TIMESTAMP,
+                Blueprint.MAX_SEQUENCE_COUNTER,
+                Blueprint.MAX_GENERATOR_ID,
+                Blueprint.MAX_CLUSTER_ID,
+                Mode.TIME_SEQUENTIAL
+        ));
+        final Blueprint blueprintMostlyOnes = IDBuilder.parse(resultMostlyOnes);
+        final byte[] resultMostlyOnesAgain = IDBuilder.build(blueprintMostlyOnes);
+        assertThat(resultMostlyOnes, is(resultMostlyOnesAgain));
     }
 
     @Test

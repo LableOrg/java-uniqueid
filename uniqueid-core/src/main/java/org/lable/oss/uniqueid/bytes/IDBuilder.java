@@ -24,12 +24,13 @@ import static org.lable.oss.uniqueid.ParameterUtil.assertNotNullEightBytes;
  * <p>
  * The eight byte ID is composed as follows:
  *
- * <pre>TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTSSSSSS ....GGGG GGGGCCCC</pre>
+ * <pre>TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTSSSSSS ...MGGGG GGGGCCCC</pre>
  *
  * <ul>
- * <li><code>T</code>: Timestamp (bit order reversed)
+ * <li><code>T</code>: Timestamp (in milliseconds, bit order depends on mode)
  * <li><code>S</code>: Sequence counter
  * <li><code>.</code>: Reserved for future use
+ * <li><code>M</code>: Mode
  * <li><code>G</code>: Generator ID
  * <li><code>C</code>: Cluster ID
  * </ul>
@@ -45,25 +46,35 @@ public class IDBuilder {
      * @return The 8-byte ID.
      */
     public static byte[] build(Blueprint blueprint) {
-        long reverseTimestamp = Long.reverse(blueprint.getTimestamp());
-        // First 42 bits are the reversed timestamp.
+        // First 42 bits are the timestamp.
         // [0] TTTTTTTT [1] TTTTTTTT [2] TTTTTTTT [3] TTTTTTTT [4] TTTTTTTT [5] TT......
         ByteBuffer bb = ByteBuffer.allocate(8);
-        byte[] tsBytes = bb.putLong(reverseTimestamp).array();
+        switch (blueprint.getMode()) {
+            case SPREAD:
+                long reverseTimestamp = Long.reverse(blueprint.getTimestamp());
+                bb.putLong(reverseTimestamp);
+                break;
+            case TIME_SEQUENTIAL:
+                long timestamp = blueprint.getTimestamp();
+                bb.putLong(timestamp << 22);
+                break;
+        }
+        byte[] tsBytes = bb.array();
 
         // Last 6 bits of byte 6 are for the sequence counter. The first two bits are from the timestamp.
         // [5] TTSSSSSS
         int or = tsBytes[5] | (byte) blueprint.getSequence();
         tsBytes[5] = (byte) or;
 
-        // Last two bytes.
-        // [6] ....GGGG  [7] GGGGCCCC
-        int generatorAndCluster = blueprint.getGeneratorId() << 4;
-        generatorAndCluster += blueprint.getClusterId();
+        // Last two bytes. The mode flag, generator ID, and cluster ID.
+        // [6] ...MGGGG  [7] GGGGCCCC
+        int flagGeneratorCluster = blueprint.getGeneratorId() << 4;
+        flagGeneratorCluster += blueprint.getClusterId();
+        flagGeneratorCluster += blueprint.getMode().getModeMask() << 12;
 
-        tsBytes[7] = (byte) generatorAndCluster;
-        generatorAndCluster >>>= 8;
-        tsBytes[6] = (byte) generatorAndCluster;
+        tsBytes[7] = (byte) flagGeneratorCluster;
+        flagGeneratorCluster >>>= 8;
+        tsBytes[6] = (byte) flagGeneratorCluster;
 
         return tsBytes;
     }
@@ -81,8 +92,9 @@ public class IDBuilder {
         int generatorId = parseGeneratorIdNoChecks(id);
         int clusterId = parseClusterIdNoChecks(id);
         long timestamp = parseTimestampNoChecks(id);
+        Mode mode = parseModeNoChecks(id);
 
-        return new Blueprint(timestamp, sequence, generatorId, clusterId);
+        return new Blueprint(timestamp, sequence, generatorId, clusterId, mode);
     }
 
     /**
@@ -129,6 +141,17 @@ public class IDBuilder {
         return parseTimestampNoChecks(id);
     }
 
+    /**
+     * Find the ID mode used to construct the identifier.
+     *
+     * @param id Identifier.
+     * @return The {@link Mode}, if {@code id} is a byte array with length eight.
+     */
+    public static Mode parseMode(byte[] id) {
+        assertNotNullEightBytes(id);
+        return parseModeNoChecks(id);
+    }
+
     // The private methods skip the null and length check on the id, because the method calling them took care of that.
 
     private static int parseSequenceIdNoChecks(byte[] id) {
@@ -138,7 +161,7 @@ public class IDBuilder {
 
     private static int parseGeneratorIdNoChecks(byte[] id) {
         // [6] ....GGGG  [7] GGGG....
-        return (id[7] >> 4 & 0x0F) | (id[6] << 4);
+        return (id[7] >> 4 & 0x0F) | (id[6] << 4 & 0xF0);
     }
 
     private static int parseClusterIdNoChecks(byte[] id) {
@@ -147,15 +170,41 @@ public class IDBuilder {
     }
 
     private static long parseTimestampNoChecks(byte[] id) {
+        Mode mode = parseModeNoChecks(id);
+        switch (mode) {
+            case TIME_SEQUENTIAL:
+                return parseTimestampNoChecksTime(id);
+            case SPREAD:
+            default:
+                return parseTimestampNoChecksSpread(id);
+        }
+    }
+
+    private static long parseTimestampNoChecksSpread(byte[] id) {
         byte[] copy = id.clone();
 
         // Clear everything but the first 42 bits for the timestamp.
-        // [0] TTTTTTTT [1] TTTTTTTT [2] TTTTTTTT [3] TTTTTTTT [4] TTTTTTTT [5] TTTTTTTT [6] TT......
+        // [0] TTTTTTTT [1] TTTTTTTT [2] TTTTTTTT [3] TTTTTTTT [4] TTTTTTTT [5] TT......
         copy[5] = (byte) (copy[5] & 0xC0);
         copy[6] = 0;
         copy[7] = 0;
 
         ByteBuffer bb = ByteBuffer.wrap(copy);
         return Long.reverse(bb.getLong());
+    }
+
+    private static long parseTimestampNoChecksTime(byte[] id) {
+        byte[] copy = id.clone();
+
+        ByteBuffer bb = ByteBuffer.wrap(copy);
+        long ts = bb.getLong();
+        ts >>>= 22;
+        return ts;
+    }
+
+    private static Mode parseModeNoChecks(byte[] id) {
+        // [6] ...M....
+        int modeMask = id[6] >> 4 & 0x01;
+        return Mode.fromModeMask(modeMask);
     }
 }

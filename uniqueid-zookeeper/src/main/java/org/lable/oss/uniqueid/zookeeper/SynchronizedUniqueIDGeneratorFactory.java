@@ -18,6 +18,7 @@ package org.lable.oss.uniqueid.zookeeper;
 import org.lable.oss.uniqueid.BaseUniqueIDGenerator;
 import org.lable.oss.uniqueid.GeneratorIdentityHolder;
 import org.lable.oss.uniqueid.IDGenerator;
+import org.lable.oss.uniqueid.bytes.Mode;
 import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,11 +45,14 @@ public class SynchronizedUniqueIDGeneratorFactory {
      *
      * @param zooKeeperConnection Connection to the ZooKeeper quorum.
      * @param znode               Base-path of the resource pool in ZooKeeper.
+     * @param mode                Generator mode.
      * @return An instance of this class.
      * @throws IOException Thrown when something went wrong trying to find the cluster ID or trying to claim a
      *                     generator ID.
      */
-    public static synchronized IDGenerator generatorFor(ZooKeeperConnection zooKeeperConnection, String znode)
+    public static synchronized IDGenerator generatorFor(ZooKeeperConnection zooKeeperConnection,
+                                                        String znode,
+                                                        Mode mode)
             throws IOException {
 
         if (!instances.containsKey(znode)) {
@@ -56,7 +60,7 @@ public class SynchronizedUniqueIDGeneratorFactory {
             SynchronizedGeneratorIdentity generatorIdentityHolder =
                     new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, null);
 
-            return generatorFor(generatorIdentityHolder);
+            return generatorFor(generatorIdentityHolder, mode);
         }
         return instances.get(znode);
     }
@@ -66,17 +70,19 @@ public class SynchronizedUniqueIDGeneratorFactory {
      *
      * @param synchronizedGeneratorIdentity An instance of {@link SynchronizedGeneratorIdentity} to (re)use for
      *                                      acquiring the generator ID.
+     * @param mode                          Generator mode.
      * @return An instance of this class.
      * @throws IOException Thrown when something went wrong trying to find the cluster ID or trying to claim a
      *                     generator ID.
      */
-    public static synchronized IDGenerator generatorFor(SynchronizedGeneratorIdentity synchronizedGeneratorIdentity)
+    public static synchronized IDGenerator generatorFor(SynchronizedGeneratorIdentity synchronizedGeneratorIdentity,
+                                                        Mode mode)
             throws IOException {
 
         String instanceKey = synchronizedGeneratorIdentity.getZNode();
         if (!instances.containsKey(instanceKey)) {
             logger.debug("Creating new instance.");
-            instances.putIfAbsent(instanceKey, new BaseUniqueIDGenerator(synchronizedGeneratorIdentity));
+            instances.putIfAbsent(instanceKey, new BaseUniqueIDGenerator(synchronizedGeneratorIdentity, mode));
         }
         return instances.get(instanceKey);
     }

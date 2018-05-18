@@ -17,6 +17,7 @@ package org.lable.oss.uniqueid;
 
 import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
+import org.lable.oss.uniqueid.bytes.Mode;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -34,7 +35,7 @@ public class UniqueIDGeneratorThreadSafetyIT {
 
     @Test
     public void multipleInstancesTest() throws InterruptedException {
-        final Set<String> ids = Collections.synchronizedSet(new HashSet<String>());
+        final Set<String> ids = Collections.synchronizedSet(new HashSet<>());
         final int threadCount = 20;
         final int iterationCount = 10000;
         final CountDownLatch latch = new CountDownLatch(threadCount);
@@ -43,22 +44,19 @@ public class UniqueIDGeneratorThreadSafetyIT {
         // Collision of IDs is almost guaranteed if the generator doesn't handle multi-threading gracefully.
 
         for (int i = 0; i < threadCount; i++) {
-            Thread t = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(1, 1);
-                    try {
-                        for (int i = 0; i < iterationCount; i++) {
-                            byte[] id = generator.generate();
-                            String asHex = Hex.encodeHexString(id);
-                            ids.add(asHex);
-                        }
-                    } catch (GeneratorException e) {
-                        // Test will fail due to missing IDs.
-                        e.printStackTrace();
+            Thread t = new Thread(() -> {
+                IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(1, 1, Mode.SPREAD);
+                try {
+                    for (int i1 = 0; i1 < iterationCount; i1++) {
+                        byte[] id = generator.generate();
+                        String asHex = Hex.encodeHexString(id);
+                        ids.add(asHex);
                     }
-                    latch.countDown();
+                } catch (GeneratorException e) {
+                    // Test will fail due to missing IDs.
+                    e.printStackTrace();
                 }
+                latch.countDown();
             });
             t.start();
         }
@@ -73,7 +71,7 @@ public class UniqueIDGeneratorThreadSafetyIT {
 
     @Test
     public void moreThanOneGeneratorClusterIDTest() throws InterruptedException {
-        final Set<String> ids = Collections.synchronizedSet(new HashSet<String>());
+        final Set<String> ids = Collections.synchronizedSet(new HashSet<>());
         // {generatorId, clusterId}
         final int[][] profiles = {
                 {0, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 15},
@@ -86,22 +84,19 @@ public class UniqueIDGeneratorThreadSafetyIT {
         // Collision of IDs is almost guaranteed if the generator doesn't handle multi-threading gracefully.
 
         for (final int[] profile : profiles) {
-            Thread t = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(profile[0], profile[1]);
-                    try {
-                        for (int i = 0; i < iterationCount; i++) {
-                            byte[] id = generator.generate();
-                            String asHex = Hex.encodeHexString(id);
-                            ids.add(asHex);
-                        }
-                    } catch (GeneratorException e) {
-                        // Test will fail due to missing IDs.
-                        e.printStackTrace();
+            Thread t = new Thread(() -> {
+                IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(profile[0], profile[1], Mode.SPREAD);
+                try {
+                    for (int i = 0; i < iterationCount; i++) {
+                        byte[] id = generator.generate();
+                        String asHex = Hex.encodeHexString(id);
+                        ids.add(asHex);
                     }
-                    latch.countDown();
+                } catch (GeneratorException e) {
+                    // Test will fail due to missing IDs.
+                    e.printStackTrace();
                 }
+                latch.countDown();
             });
             t.start();
         }

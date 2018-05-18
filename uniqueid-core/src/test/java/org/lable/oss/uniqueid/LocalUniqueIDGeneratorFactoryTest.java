@@ -16,26 +16,27 @@
 package org.lable.oss.uniqueid;
 
 import org.junit.Test;
+import org.lable.oss.uniqueid.bytes.Mode;
 
 public class LocalUniqueIDGeneratorFactoryTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void outOfBoundsGeneratorIDTest() {
-        LocalUniqueIDGeneratorFactory.generatorFor(256, 0);
+        LocalUniqueIDGeneratorFactory.generatorFor(256, 0, Mode.SPREAD);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void outOfBoundsClusterIDTest() {
-        LocalUniqueIDGeneratorFactory.generatorFor(0, 16);
+        LocalUniqueIDGeneratorFactory.generatorFor(0, 16, Mode.SPREAD);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void outOfBoundsGeneratorIDNegativeTest() {
-        LocalUniqueIDGeneratorFactory.generatorFor(-1, 0);
+        LocalUniqueIDGeneratorFactory.generatorFor(-1, 0, Mode.SPREAD);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void outOfBoundsClusterIDNegativeTest() {
-        LocalUniqueIDGeneratorFactory.generatorFor(0, -1);
+        LocalUniqueIDGeneratorFactory.generatorFor(0, -1, Mode.SPREAD);
     }
 }

@@ -17,6 +17,7 @@ package org.lable.oss.uniqueid;
 
 import org.lable.oss.uniqueid.bytes.Blueprint;
 import org.lable.oss.uniqueid.bytes.IDBuilder;
+import org.lable.oss.uniqueid.bytes.Mode;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class BaseUniqueIDGenerator implements IDGenerator {
     protected final GeneratorIdentityHolder generatorIdentityHolder;
+    private final Mode mode;
 
     long previousTimestamp = 0;
     int sequence = 0;
@@ -41,9 +43,11 @@ public class BaseUniqueIDGenerator implements IDGenerator {
      * Create a new UniqueIDGenerator instance.
      *
      * @param generatorIdentityHolder Generator identity holder.
+     * @param mode                    Generator mode.
      */
-    public BaseUniqueIDGenerator(GeneratorIdentityHolder generatorIdentityHolder) {
+    public BaseUniqueIDGenerator(GeneratorIdentityHolder generatorIdentityHolder, Mode mode) {
         this.generatorIdentityHolder = generatorIdentityHolder;
+        this.mode = mode == null ? Mode.defaultMode() : mode;
     }
 
     /**
@@ -72,7 +76,8 @@ public class BaseUniqueIDGenerator implements IDGenerator {
                 now,
                 sequence,
                 generatorIdentityHolder.getGeneratorId(),
-                generatorIdentityHolder.getClusterId()
+                generatorIdentityHolder.getClusterId(),
+                mode
         );
 
         return IDBuilder.build(blueprint);

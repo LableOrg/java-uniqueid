@@ -15,6 +15,7 @@
  */
 package org.lable.oss.uniqueid.zookeeper;
 
+import org.apache.commons.codec.binary.Hex;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -22,6 +23,7 @@ import org.lable.oss.uniqueid.GeneratorException;
 import org.lable.oss.uniqueid.IDGenerator;
 import org.lable.oss.uniqueid.bytes.Blueprint;
 import org.lable.oss.uniqueid.bytes.IDBuilder;
+import org.lable.oss.uniqueid.bytes.Mode;
 import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
@@ -55,11 +57,30 @@ public class SynchronizedUniqueIDGeneratorIT {
 
     @Test
     public void simpleTest() throws Exception {
-        IDGenerator generator = generatorFor(zooKeeperConnection, znode);
+        IDGenerator generator = generatorFor(zooKeeperConnection, znode, Mode.TIME_SEQUENTIAL);
         byte[] result = generator.generate();
         Blueprint blueprint = IDBuilder.parse(result);
         assertThat(result.length, is(8));
         assertThat(blueprint.getClusterId(), is(CLUSTER_ID));
+    }
+
+    @Test
+    public void timeSequentialTest() throws Exception {
+        SynchronizedGeneratorIdentity generatorIdentityHolder =
+                new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, 0, null);
+        IDGenerator generator = generatorFor(generatorIdentityHolder, Mode.TIME_SEQUENTIAL);
+
+        Set<byte[]> ids = new HashSet<>();
+        for (int i = 0; i < 100_000; i++) {
+            ids.add(generator.generate());
+        }
+
+        assertThat(ids.size(), is(100_000));
+
+        byte[] id = ids.iterator().next();
+
+        System.out.println(Hex.encodeHex(id));
+        System.out.println(IDBuilder.parseTimestamp(id));
     }
 
     @Test
@@ -78,7 +99,7 @@ public class SynchronizedUniqueIDGeneratorIT {
                 ready.countDown();
                 try {
                     start.await();
-                    IDGenerator generator = generatorFor(zooKeeperConnection, znode);
+                    IDGenerator generator = generatorFor(zooKeeperConnection, znode, Mode.SPREAD);
                     result.put(number, generator.batch(batchSize));
                 } catch (IOException | InterruptedException | GeneratorException e) {
                     fail();

@@ -15,12 +15,10 @@
  */
 package org.lable.oss.uniqueid.bytes;
 
-import org.lable.oss.uniqueid.BaseUniqueIDGenerator;
-
 import static org.lable.oss.uniqueid.ParameterUtil.assertParameterWithinBounds;
 
 /**
- * Contains all data required to build the ID.
+ * Contains all parameters required to build the ID.
  */
 public class Blueprint {
     /**
@@ -47,9 +45,10 @@ public class Blueprint {
     final int sequence;
     final int generatorId;
     final int clusterId;
+    final Mode mode;
 
     /**
-     * Create a blueprint for a unique ID.
+     * Create a blueprint for a unique ID with the default mode of {@link Mode#SPREAD}.
      *
      * @param timestamp   Milliseconds since the Unix epoch.
      * @param sequence    Sequence counter.
@@ -59,6 +58,22 @@ public class Blueprint {
      * @see #MAX_GENERATOR_ID
      */
     public Blueprint(long timestamp, int sequence, int generatorId, int clusterId) {
+        this(timestamp, sequence, generatorId, clusterId, Mode.SPREAD);
+    }
+
+    /**
+     * Create a blueprint for a unique ID.
+     *
+     * @param timestamp   Milliseconds since the Unix epoch.
+     * @param sequence    Sequence counter.
+     * @param generatorId Generator ID.
+     * @param clusterId   Cluster ID.
+     * @param mode        Mode to use.
+     * @see #MAX_CLUSTER_ID
+     * @see #MAX_GENERATOR_ID
+     * @see Mode
+     */
+    public Blueprint(long timestamp, int sequence, int generatorId, int clusterId, Mode mode) {
         assertParameterWithinBounds("timestamp", 0, MAX_TIMESTAMP, timestamp);
         assertParameterWithinBounds("sequence counter", 0, MAX_SEQUENCE_COUNTER, sequence);
         assertParameterWithinBounds("generator-ID", 0, MAX_GENERATOR_ID, generatorId);
@@ -68,6 +83,7 @@ public class Blueprint {
         this.sequence = sequence;
         this.generatorId = generatorId;
         this.clusterId = clusterId;
+        this.mode = mode == null ? Mode.SPREAD : mode;
     }
 
     /**
@@ -98,11 +114,18 @@ public class Blueprint {
         return clusterId;
     }
 
+    /**
+     * @return The ID mode chosen.
+     */
+    public Mode getMode() {
+        return mode;
+    }
+
     @Override
     public String toString() {
         return String.format(
-                "{\n  timestamp: %d,\n  sequence: %d,\n  generator: %d,\n  cluster: %d\n}",
-                timestamp, sequence, generatorId, clusterId
+                "{\n  mode: %s,\n  timestamp: %d,\n  sequence: %d,\n  generator: %d,\n  cluster: %d\n}",
+                mode, timestamp, sequence, generatorId, clusterId
         );
     }
 }

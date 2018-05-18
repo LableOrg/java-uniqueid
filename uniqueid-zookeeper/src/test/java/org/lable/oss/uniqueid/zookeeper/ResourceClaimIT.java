@@ -93,8 +93,7 @@ public class ResourceClaimIT {
 
         assertThat(result.size(), is(threadCount));
 
-        Set<Integer> allResources = new HashSet<>();
-        allResources.addAll(result.values());
+        Set<Integer> allResources = new HashSet<>(result.values());
         assertThat(allResources.size(), is(threadCount));
     }
 
@@ -130,8 +129,7 @@ public class ResourceClaimIT {
 
         assertThat(result.size(), is(threadCount));
 
-        Set<Integer> allResources = new HashSet<>();
-        allResources.addAll(result.values());
+        Set<Integer> allResources = new HashSet<>(result.values());
         assertThat(allResources.size(), is(1));
     }
 }

@@ -18,6 +18,7 @@ package org.lable.oss.uniqueid;
 import org.junit.Test;
 import org.lable.oss.uniqueid.bytes.Blueprint;
 import org.lable.oss.uniqueid.bytes.IDBuilder;
+import org.lable.oss.uniqueid.bytes.Mode;
 
 import java.util.Deque;
 
@@ -32,7 +33,11 @@ public class OnePerMillisecondDecoratorIT {
         final int CLUSTER_ID = 7;
         final int BATCH_SIZE = 500;
 
-        IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(GENERATOR_ID, CLUSTER_ID);
+        IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(
+                GENERATOR_ID,
+                CLUSTER_ID,
+                Mode.SPREAD
+        );
         IDGenerator decorator = OnePerMillisecondDecorator.decorate(generator);
 
         Deque<byte[]> stack = decorator.batch(BATCH_SIZE);

@@ -20,6 +20,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.lable.oss.uniqueid.GeneratorException;
 import org.lable.oss.uniqueid.IDGenerator;
+import org.lable.oss.uniqueid.bytes.Mode;
 import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
@@ -74,7 +75,7 @@ public class MultipleGeneratorsIT {
                 try {
                     start.await();
                     String znode = number % 2 == 0 ? znodeA : znodeB;
-                    IDGenerator generator = generatorFor(zookeeperConnection, znode);
+                    IDGenerator generator = generatorFor(zookeeperConnection, znode, Mode.SPREAD);
                     result.put(number, generator.batch(batchSize));
                 } catch (IOException | InterruptedException | GeneratorException e) {
                     fail();

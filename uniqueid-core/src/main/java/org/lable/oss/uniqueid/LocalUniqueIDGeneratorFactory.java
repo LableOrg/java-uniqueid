@@ -16,13 +16,10 @@
 package org.lable.oss.uniqueid;
 
 import org.lable.oss.uniqueid.bytes.Blueprint;
+import org.lable.oss.uniqueid.bytes.Mode;
 
-import javax.annotation.PreDestroy;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import static org.lable.oss.uniqueid.ParameterUtil.assertParameterWithinBounds;
 
@@ -42,15 +39,16 @@ public class LocalUniqueIDGeneratorFactory {
      *
      * @param generatorId Generator ID to use (0 ≤ n ≤ 255).
      * @param clusterId   Cluster ID to use (0 ≤ n ≤ 15).
+     * @param mode        Generator mode.
      * @return A thread-safe UniqueIDGenerator instance.
      */
-    public synchronized static IDGenerator generatorFor(int generatorId, int clusterId) {
+    public synchronized static IDGenerator generatorFor(int generatorId, int clusterId, Mode mode) {
         assertParameterWithinBounds("generatorId", 0, Blueprint.MAX_GENERATOR_ID, generatorId);
         assertParameterWithinBounds("clusterId", 0, Blueprint.MAX_CLUSTER_ID, clusterId);
         String generatorAndCluster = String.format("%d_%d", generatorId, clusterId);
         if (!instances.containsKey(generatorAndCluster)) {
             GeneratorIdentityHolder identityHolder = LocalGeneratorIdentity.with(clusterId, generatorId);
-            instances.putIfAbsent(generatorAndCluster, new BaseUniqueIDGenerator(identityHolder));
+            instances.putIfAbsent(generatorAndCluster, new BaseUniqueIDGenerator(identityHolder, mode));
         }
         return instances.get(generatorAndCluster);
     }
