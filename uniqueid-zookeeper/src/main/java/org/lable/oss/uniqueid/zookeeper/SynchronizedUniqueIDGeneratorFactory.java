@@ -15,11 +15,11 @@
  */
 package org.lable.oss.uniqueid.zookeeper;
 
+import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 import org.lable.oss.uniqueid.BaseUniqueIDGenerator;
 import org.lable.oss.uniqueid.GeneratorIdentityHolder;
 import org.lable.oss.uniqueid.IDGenerator;
 import org.lable.oss.uniqueid.bytes.Mode;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +50,7 @@ public class SynchronizedUniqueIDGeneratorFactory {
      * @throws IOException Thrown when something went wrong trying to find the cluster ID or trying to claim a
      *                     generator ID.
      */
-    public static synchronized IDGenerator generatorFor(ZooKeeperConnection zooKeeperConnection,
+    public static synchronized IDGenerator generatorFor(MonitoringZookeeperConnection zooKeeperConnection,
                                                         String znode,
                                                         Mode mode)
             throws IOException {

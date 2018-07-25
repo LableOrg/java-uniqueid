@@ -15,10 +15,10 @@
  */
 package org.lable.oss.uniqueid.zookeeper;
 
+import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 import org.lable.oss.uniqueid.GeneratorException;
 import org.lable.oss.uniqueid.GeneratorIdentityHolder;
 import org.lable.oss.uniqueid.bytes.Blueprint;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -37,11 +37,11 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
     final int clusterId;
     final Supplier<Duration> claimDurationSupplier;
     final String zNode;
-    final ZooKeeperConnection zooKeeperConnection;
+    final MonitoringZookeeperConnection zooKeeperConnection;
 
     ResourceClaim resourceClaim = null;
 
-    public SynchronizedGeneratorIdentity(ZooKeeperConnection zooKeeperConnection,
+    public SynchronizedGeneratorIdentity(MonitoringZookeeperConnection zooKeeperConnection,
                                          String zNode,
                                          int clusterId,
                                          Supplier<Duration> claimDurationSupplier) {
@@ -65,7 +65,7 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
                                                         String znode,
                                                         Supplier<Duration> claimDurationSupplier)
             throws IOException {
-        ZooKeeperConnection zooKeeperConnection = new ZooKeeperConnection(quorum);
+        MonitoringZookeeperConnection zooKeeperConnection = new MonitoringZookeeperConnection(quorum.split(","));
         int clusterId = ClusterID.get(zooKeeperConnection.getActiveConnection(), znode);
 
         return new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, claimDurationSupplier);
@@ -83,7 +83,7 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
                                                         String znode,
                                                         Long claimDuration)
             throws IOException {
-        ZooKeeperConnection zooKeeperConnection = new ZooKeeperConnection(quorum);
+        MonitoringZookeeperConnection zooKeeperConnection = new MonitoringZookeeperConnection(quorum.split(","));
         int clusterId = ClusterID.get(zooKeeperConnection.getActiveConnection(), znode);
         Supplier<Duration> durationSupplier = () -> Duration.ofMillis(claimDuration);
 

@@ -18,7 +18,7 @@ package org.lable.oss.uniqueid.zookeeper;
 import org.apache.zookeeper.KeeperException;
 import org.junit.*;
 import org.junit.rules.ExpectedException;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
+import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -39,11 +39,11 @@ public class ExpiringResourceClaimIT {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
-    static ZooKeeperConnection zookeeperConnection;
+    static MonitoringZookeeperConnection zookeeperConnection;
 
     @BeforeClass
     public static void before() throws IOException, KeeperException, InterruptedException {
-        zookeeperConnection = new ZooKeeperConnection(zkInstance.getQuorumAddresses());
+        zookeeperConnection = new MonitoringZookeeperConnection(zkInstance.getQuorumAddresses().split(","));
         ResourceTestPoolHelper.prepareEmptyQueueAndPool(zkInstance.getZookeeperConnection(), znode);
         ResourceTestPoolHelper.prepareClusterID(zkInstance.getZookeeperConnection(), znode, 0);
     }

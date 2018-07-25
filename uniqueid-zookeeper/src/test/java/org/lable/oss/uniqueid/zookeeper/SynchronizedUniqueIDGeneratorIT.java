@@ -19,12 +19,12 @@ import org.apache.commons.codec.binary.Hex;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 import org.lable.oss.uniqueid.GeneratorException;
 import org.lable.oss.uniqueid.IDGenerator;
 import org.lable.oss.uniqueid.bytes.Blueprint;
 import org.lable.oss.uniqueid.bytes.IDBuilder;
 import org.lable.oss.uniqueid.bytes.Mode;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
 import java.util.Deque;
@@ -42,7 +42,7 @@ import static org.lable.oss.uniqueid.zookeeper.SynchronizedUniqueIDGeneratorFact
 
 public class SynchronizedUniqueIDGeneratorIT {
     static String znode = "/unique-id-generator";
-    static ZooKeeperConnection zooKeeperConnection;
+    static MonitoringZookeeperConnection zooKeeperConnection;
 
     @ClassRule
     public static ZooKeeperInstance zkInstance = new ZooKeeperInstance();
@@ -50,9 +50,9 @@ public class SynchronizedUniqueIDGeneratorIT {
 
     @BeforeClass
     public static void before() throws Exception {
-        zooKeeperConnection = new ZooKeeperConnection(zkInstance.getQuorumAddresses());
-        ResourceTestPoolHelper.prepareEmptyQueueAndPool(zooKeeperConnection.get(), znode);
-        ResourceTestPoolHelper.prepareClusterID(zooKeeperConnection.get(), znode, CLUSTER_ID);
+        zooKeeperConnection = new MonitoringZookeeperConnection(zkInstance.getQuorumAddresses());
+        ResourceTestPoolHelper.prepareEmptyQueueAndPool(zooKeeperConnection.getActiveConnection(), znode);
+        ResourceTestPoolHelper.prepareClusterID(zooKeeperConnection.getActiveConnection(), znode, CLUSTER_ID);
     }
 
     @Test

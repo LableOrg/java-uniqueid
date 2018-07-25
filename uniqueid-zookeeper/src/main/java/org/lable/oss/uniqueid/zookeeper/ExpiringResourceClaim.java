@@ -15,7 +15,7 @@
  */
 package org.lable.oss.uniqueid.zookeeper;
 
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
+import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +33,10 @@ public class ExpiringResourceClaim extends ResourceClaim {
 
     public final static long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
-    ExpiringResourceClaim(ZooKeeperConnection zooKeeperConnection, int poolSize, String znode, long timeout) throws IOException {
+    ExpiringResourceClaim(MonitoringZookeeperConnection zooKeeperConnection,
+                          int poolSize,
+                          String znode,
+                          long timeout) throws IOException {
         super(zooKeeperConnection, poolSize, znode);
         new Timer().schedule(new TimerTask() {
             @Override
@@ -51,7 +54,9 @@ public class ExpiringResourceClaim extends ResourceClaim {
      * @param znode               Root znode of the ZooKeeper resource-pool.
      * @return A resource claim.
      */
-    public static ResourceClaim claimExpiring(ZooKeeperConnection zooKeeperConnection, int poolSize, String znode)
+    public static ResourceClaim claimExpiring(MonitoringZookeeperConnection zooKeeperConnection,
+                                              int poolSize,
+                                              String znode)
             throws IOException {
         return claimExpiring(zooKeeperConnection, poolSize, znode, DEFAULT_TIMEOUT);
     }
@@ -65,7 +70,7 @@ public class ExpiringResourceClaim extends ResourceClaim {
      * @param timeout             Delay in milliseconds before the claim expires.
      * @return A resource claim.
      */
-    public static ResourceClaim claimExpiring(ZooKeeperConnection zooKeeperConnection,
+    public static ResourceClaim claimExpiring(MonitoringZookeeperConnection zooKeeperConnection,
                                               int poolSize,
                                               String znode,
                                               Long timeout)

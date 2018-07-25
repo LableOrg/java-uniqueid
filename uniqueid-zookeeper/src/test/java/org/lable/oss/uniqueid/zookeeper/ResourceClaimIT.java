@@ -19,7 +19,7 @@ package org.lable.oss.uniqueid.zookeeper;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
+import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -45,14 +45,14 @@ public class ResourceClaimIT {
     @Rule
     public ZooKeeperInstance zkInstance = new ZooKeeperInstance();
 
-    ZooKeeperConnection zookeeperConnection;
+    MonitoringZookeeperConnection zookeeperConnection;
 
     @Before
     public void before() throws Exception {
         zookeeperQuorum = zkInstance.getQuorumAddresses();
-        zookeeperConnection = new ZooKeeperConnection(zkInstance.getQuorumAddresses());
-        prepareClusterID(zookeeperConnection.get(), znode, 3);
-        prepareEmptyQueueAndPool(zookeeperConnection.get(), znode);
+        zookeeperConnection = new MonitoringZookeeperConnection(zkInstance.getQuorumAddresses());
+        prepareClusterID(zookeeperConnection.getActiveConnection(), znode, 3);
+        prepareEmptyQueueAndPool(zookeeperConnection.getActiveConnection(), znode);
     }
 
     @Test

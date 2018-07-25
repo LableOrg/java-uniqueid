@@ -18,10 +18,10 @@ package org.lable.oss.uniqueid.zookeeper;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 import org.lable.oss.uniqueid.GeneratorException;
 import org.lable.oss.uniqueid.IDGenerator;
 import org.lable.oss.uniqueid.bytes.Mode;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
 
 import java.io.IOException;
 import java.util.Deque;
@@ -45,17 +45,17 @@ public class MultipleGeneratorsIT {
     public static ZooKeeperInstance zkInstance = new ZooKeeperInstance();
 
     final static int CLUSTER_ID = 4;
-    static ZooKeeperConnection zookeeperConnection;
+    static MonitoringZookeeperConnection zookeeperConnection;
 
     @BeforeClass
     public static void before() throws Exception {
-        zookeeperConnection = new ZooKeeperConnection(zkInstance.getQuorumAddresses());
+        zookeeperConnection = new MonitoringZookeeperConnection(zkInstance.getQuorumAddresses());
 
-        ResourceTestPoolHelper.prepareEmptyQueueAndPool(zookeeperConnection.get(), znodeA);
-        ResourceTestPoolHelper.prepareClusterID(zookeeperConnection.get(), znodeA, CLUSTER_ID);
+        ResourceTestPoolHelper.prepareEmptyQueueAndPool(zookeeperConnection.getActiveConnection(), znodeA);
+        ResourceTestPoolHelper.prepareClusterID(zookeeperConnection.getActiveConnection(), znodeA, CLUSTER_ID);
 
-        ResourceTestPoolHelper.prepareEmptyQueueAndPool(zookeeperConnection.get(), znodeB);
-        ResourceTestPoolHelper.prepareClusterID(zookeeperConnection.get(), znodeB, CLUSTER_ID);
+        ResourceTestPoolHelper.prepareEmptyQueueAndPool(zookeeperConnection.getActiveConnection(), znodeB);
+        ResourceTestPoolHelper.prepareClusterID(zookeeperConnection.getActiveConnection(), znodeB, CLUSTER_ID);
     }
 
     @Test

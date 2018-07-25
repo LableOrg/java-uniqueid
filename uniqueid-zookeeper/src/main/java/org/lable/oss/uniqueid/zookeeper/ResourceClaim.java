@@ -18,8 +18,8 @@ package org.lable.oss.uniqueid.zookeeper;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.data.Stat;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnection;
-import org.lable.oss.uniqueid.zookeeper.connection.ZooKeeperConnectionObserver;
+import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
+import org.lable.oss.dynamicconfig.zookeeper.ZooKeeperConnectionObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection.State.LIVE;
 import static org.lable.oss.uniqueid.zookeeper.ZooKeeperHelper.createIfNotThere;
 import static org.lable.oss.uniqueid.zookeeper.ZooKeeperHelper.mkdirp;
 
@@ -49,11 +50,11 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
 
     final int poolSize;
     final ZooKeeper zookeeper;
-    final ZooKeeperConnection zooKeeperConnection;
+    final MonitoringZookeeperConnection zooKeeperConnection;
 
-    protected State state = State.UNCLAIMED;
+    protected State state;
 
-    ResourceClaim(ZooKeeperConnection zooKeeperConnection, int poolSize, String znode) throws IOException {
+    ResourceClaim(MonitoringZookeeperConnection zooKeeperConnection, int poolSize, String znode) throws IOException {
         logger.debug("Acquiring resource-claim…");
 
         ZNODE = znode;
@@ -64,7 +65,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
         this.zooKeeperConnection = zooKeeperConnection;
         this.zookeeper = zooKeeperConnection.getActiveConnection();
 
-        if (zookeeper.getState() != ZooKeeper.States.CONNECTED) {
+        if (zooKeeperConnection.getState() != LIVE) {
             throw new IOException("Not connected to ZooKeeper quorum.");
         }
 
@@ -104,7 +105,8 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * @param znode               Root znode of the ZooKeeper resource-pool.
      * @return A resource claim.
      */
-    public static ResourceClaim claim(ZooKeeperConnection zooKeeperConnection, int poolSize, String znode) throws IOException {
+    public static ResourceClaim claim(MonitoringZookeeperConnection zooKeeperConnection, int poolSize, String znode)
+            throws IOException {
         return new ResourceClaim(zooKeeperConnection, poolSize, znode);
     }
 
