@@ -37,6 +37,15 @@
       <artifactId>zookeeper-connection</artifactId>
       <version>${dynamicconfig.version}</version>
     </dependency>
+
+    <!-- Testing dependencies. -->
+    <dependency>
+      <artifactId>uniqueid-core</artifactId>
+      <groupId>org.lable.oss.uniqueid</groupId>
+      <classifier>tests</classifier>
+      <scope>test</scope>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
 
   <build>

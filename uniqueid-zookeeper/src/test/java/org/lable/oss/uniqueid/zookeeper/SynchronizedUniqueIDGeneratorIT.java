@@ -20,6 +20,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
+import org.lable.oss.uniqueid.ByteArray;
 import org.lable.oss.uniqueid.GeneratorException;
 import org.lable.oss.uniqueid.IDGenerator;
 import org.lable.oss.uniqueid.bytes.Blueprint;
@@ -70,17 +71,26 @@ public class SynchronizedUniqueIDGeneratorIT {
                 new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, 0, null);
         IDGenerator generator = generatorFor(generatorIdentityHolder, Mode.TIME_SEQUENTIAL);
 
-        Set<byte[]> ids = new HashSet<>();
+        Set<ByteArray> ids = new HashSet<>();
         for (int i = 0; i < 100_000; i++) {
-            ids.add(generator.generate());
+            ids.add(new ByteArray(generator.generate()));
         }
 
         assertThat(ids.size(), is(100_000));
 
-        byte[] id = ids.iterator().next();
+        ByteArray id = ids.iterator().next();
 
-        System.out.println(Hex.encodeHex(id));
-        System.out.println(IDBuilder.parseTimestamp(id));
+        System.out.println(Hex.encodeHex(id.getValue()));
+        System.out.println(IDBuilder.parseTimestamp(id.getValue()));
+    }
+
+    @Test
+    public void test() {
+        Set<ByteArray> s = new HashSet<>();
+        s.add(new ByteArray(new byte[]{0, 1}));
+        s.add(new ByteArray(new byte[]{0, 1}));
+        assertThat(s.size(), is(1));
+
     }
 
     @Test
@@ -114,10 +124,10 @@ public class SynchronizedUniqueIDGeneratorIT {
 
         assertThat(result.size(), is(threadCount));
 
-        Set<byte[]> allIDs = new HashSet<>();
+        Set<ByteArray> allIDs = new HashSet<>();
         for (Map.Entry<Integer, Deque<byte[]>> entry : result.entrySet()) {
             assertThat(entry.getValue().size(), is(batchSize));
-            allIDs.addAll(entry.getValue());
+            entry.getValue().forEach(value -> allIDs.add(new ByteArray(value)));
         }
         assertThat(allIDs.size(), is(threadCount * batchSize));
     }
