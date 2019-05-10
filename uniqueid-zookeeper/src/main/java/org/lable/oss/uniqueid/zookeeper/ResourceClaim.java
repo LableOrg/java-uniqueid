@@ -256,8 +256,9 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
         }
 
         if (positionInQueue < 0) {
-            // Theoretically not possible.
-            throw new RuntimeException("Created node (" + placeInLine + ") not found in getChildren().");
+            // Possible if the queue was cleared for maintenance or fault recovery purposes
+            // between the moment we fetched the list of children and now.
+            return acquireLock(zookeeper, lockNode);
         }
 
         String placeBeforeUs;
