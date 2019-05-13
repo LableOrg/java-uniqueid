@@ -43,7 +43,7 @@
   <properties>
     <java.language.level>1.8</java.language.level>
 
-    <dynamicconfig.version>2.6-beta6-SNAPSHOT</dynamicconfig.version>
+    <dynamicconfig.version>2.9-beta1</dynamicconfig.version>
     <zookeeper.version>3.4.6</zookeeper.version>
     <slf4j.version>1.7.21</slf4j.version>
 
