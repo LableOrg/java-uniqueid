@@ -20,6 +20,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 
+import static org.lable.oss.uniqueid.zookeeper.ResourceClaim.LOCKING_TICKET;
+
 /**
  * Static methods for filling a ZooKeeper testing tree.
  */
@@ -60,5 +62,26 @@ public class ResourceTestPoolHelper {
         }
         zookeeper.create(znode + "/cluster-id", String.valueOf(clusterId).getBytes(),
                 ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+    }
+
+    public static void claimLockingTicket(ZooKeeper zookeeper, String znode)
+            throws KeeperException, InterruptedException {
+        zookeeper.create(
+                znode + "/queue/" + LOCKING_TICKET,
+                new byte[0],
+                ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                CreateMode.PERSISTENT
+        );
+    }
+
+    public static void deleteLockingTicket(ZooKeeper zookeeper, String znode)
+            throws KeeperException, InterruptedException {
+        try {
+            zookeeper.delete(znode + "/queue/" + LOCKING_TICKET, -1);
+        } catch (KeeperException e) {
+            if (e.code() != KeeperException.Code.NONODE) {
+                throw e;
+            }
+        }
     }
 }

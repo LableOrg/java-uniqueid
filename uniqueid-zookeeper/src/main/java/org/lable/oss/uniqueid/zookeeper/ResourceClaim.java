@@ -15,8 +15,11 @@
  */
 package org.lable.oss.uniqueid.zookeeper;
 
-import org.apache.zookeeper.*;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 import org.lable.oss.dynamicconfig.zookeeper.ZooKeeperConnectionObserver;
@@ -25,6 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -54,8 +59,11 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
 
     protected State state;
 
-    ResourceClaim(MonitoringZookeeperConnection zooKeeperConnection, int poolSize, String znode) throws IOException {
+    ResourceClaim(MonitoringZookeeperConnection zooKeeperConnection, int poolSize, String znode, Duration timeout)
+            throws IOException {
         logger.debug("Acquiring resource-claim…");
+
+        Instant giveUpAfter = timeout == null ? null : Instant.now().plus(timeout);
 
         ZNODE = znode;
         QUEUE_NODE = znode + "/queue";
@@ -71,8 +79,8 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
 
         try {
             ensureRequiredZnodesExist(zookeeper, znode);
-            String placeInLine = acquireLock(zookeeper, QUEUE_NODE);
-            this.resource = claimResource(zookeeper, POOL_NODE, poolSize);
+            String placeInLine = acquireLock(zookeeper, QUEUE_NODE, giveUpAfter);
+            this.resource = claimResource(zookeeper, POOL_NODE, poolSize, giveUpAfter);
             releaseTicket(zookeeper, QUEUE_NODE, placeInLine);
         } catch (KeeperException e) {
             throw new IOException(e);
@@ -105,9 +113,26 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
      * @param znode               Root znode of the ZooKeeper resource-pool.
      * @return A resource claim.
      */
-    public static ResourceClaim claim(MonitoringZookeeperConnection zooKeeperConnection, int poolSize, String znode)
-            throws IOException {
-        return new ResourceClaim(zooKeeperConnection, poolSize, znode);
+    public static ResourceClaim claim(MonitoringZookeeperConnection zooKeeperConnection,
+                                      int poolSize,
+                                      String znode) throws IOException {
+        return new ResourceClaim(zooKeeperConnection, poolSize, znode, Duration.ofMinutes(10));
+    }
+
+    /**
+     * Claim a resource.
+     *
+     * @param zooKeeperConnection ZooKeeper connection to use.
+     * @param poolSize            Size of the resource pool.
+     * @param znode               Root znode of the ZooKeeper resource-pool.
+     * @param timeout             Time out if the process takes longer than this.
+     * @return A resource claim.
+     */
+    public static ResourceClaim claim(MonitoringZookeeperConnection zooKeeperConnection,
+                                      int poolSize,
+                                      String znode,
+                                      Duration timeout) throws IOException {
+        return new ResourceClaim(zooKeeperConnection, poolSize, znode, timeout);
     }
 
     /**
@@ -160,11 +185,13 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
     /**
      * Try to acquire a lock on for choosing a resource. This method will wait until it has acquired the lock.
      *
-     * @param zookeeper ZooKeeper connection to use.
-     * @param lockNode Path to the znode representing the locking queue.
+     * @param zookeeper   ZooKeeper connection to use.
+     * @param lockNode    Path to the znode representing the locking queue.
+     * @param giveUpAfter Stop trying after this instant. May be {@code null} to indicate no time-out should occur.
      * @return Name of the first node in the queue.
      */
-    static String acquireLock(ZooKeeper zookeeper, String lockNode) throws KeeperException, InterruptedException {
+    static String acquireLock(ZooKeeper zookeeper, String lockNode, Instant giveUpAfter)
+            throws KeeperException, InterruptedException, IOException {
         // Inspired by the queueing algorithm suggested here:
         // http://zookeeper.apache.org/doc/trunk/recipes.html#sc_recipes_Queues
 
@@ -172,8 +199,13 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
         String placeInLine = takeQueueTicket(zookeeper, lockNode);
         logger.debug("Acquiring lock, waiting in queue: {}.", placeInLine);
 
-        // Wait in the queue until our turn has come.
-        return waitInLine(zookeeper, lockNode, placeInLine);
+        try {
+            // Wait in the queue until our turn has come.
+            return waitInLine(zookeeper, lockNode, placeInLine, giveUpAfter);
+        } catch (KeeperException | InterruptedException | IOException e) {
+            releaseTicket(zookeeper, lockNode, placeInLine);
+            throw e;
+        }
     }
 
     /**
@@ -219,13 +251,14 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
     /**
      * Wait in the queue until the znode in front of us changes.
      *
-     * @param zookeeper ZooKeeper connection to use.
-     * @param lockNode Path to the znode representing the locking queue.
+     * @param zookeeper   ZooKeeper connection to use.
+     * @param lockNode    Path to the znode representing the locking queue.
      * @param placeInLine Name of our current position in the queue.
+     * @param giveUpAfter Give up after this instant in time.
      * @return Name of the first node in the queue, when we are it.
      */
-    static String waitInLine(ZooKeeper zookeeper, String lockNode, String placeInLine)
-            throws KeeperException, InterruptedException {
+    static String waitInLine(ZooKeeper zookeeper, String lockNode, String placeInLine, Instant giveUpAfter)
+            throws KeeperException, InterruptedException, IOException {
 
         // Get the list of nodes in the queue, and find out what our position is.
         List<String> children = zookeeper.getChildren(lockNode, false);
@@ -236,7 +269,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
         if (children.size() == 0) {
             // Only possible if some other process cancelled our ticket.
             logger.warn("getChildren() returned empty list, but we created a ticket.");
-            return acquireLock(zookeeper, lockNode);
+            return acquireLock(zookeeper, lockNode, giveUpAfter);
         }
 
         boolean lockingTicketExists = children.get(0).equals(LOCKING_TICKET);
@@ -258,7 +291,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
         if (positionInQueue < 0) {
             // Possible if the queue was cleared for maintenance or fault recovery purposes
             // between the moment we fetched the list of children and now.
-            return acquireLock(zookeeper, lockNode);
+            return acquireLock(zookeeper, lockNode, giveUpAfter);
         }
 
         String placeBeforeUs;
@@ -288,10 +321,10 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
         // watch it for changes:
         if (stat != null) {
             logger.debug("Watching place in queue before us ({})", placeBeforeUs);
-            latch.await();
+            awaitLatchUnlessItTakesTooLong(latch, giveUpAfter);
         }
 
-        return waitInLine(zookeeper, lockNode, placeInLine);
+        return waitInLine(zookeeper, lockNode, placeInLine, giveUpAfter);
     }
 
     /**
@@ -323,13 +356,14 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
     /**
      * Try to claim an available resource from the resource pool.
      *
-     * @param zookeeper ZooKeeper connection to use.
-     * @param poolNode Path to the znode representing the resource pool.
-     * @param poolSize Size of the resource pool.
+     * @param zookeeper   ZooKeeper connection to use.
+     * @param poolNode    Path to the znode representing the resource pool.
+     * @param poolSize    Size of the resource pool.
+     * @param giveUpAfter Give up after this instant in time.
      * @return The claimed resource.
      */
-    int claimResource(ZooKeeper zookeeper, String poolNode, int poolSize)
-            throws KeeperException, InterruptedException {
+    int claimResource(ZooKeeper zookeeper, String poolNode, int poolSize, Instant giveUpAfter)
+            throws KeeperException, InterruptedException, IOException {
 
         logger.debug("Trying to claim a resource.");
         List<String> claimedResources = zookeeper.getChildren(poolNode, false);
@@ -338,8 +372,8 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
             // No resources available. Wait for a resource to become available.
             final CountDownLatch latch = new CountDownLatch(1);
             zookeeper.getChildren(poolNode, event -> latch.countDown());
-            latch.await();
-            return claimResource(zookeeper, poolNode, poolSize);
+            awaitLatchUnlessItTakesTooLong(latch, giveUpAfter);
+            return claimResource(zookeeper, poolNode, poolSize, giveUpAfter);
         }
 
         // Try to claim an available resource.
@@ -378,7 +412,7 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
             }
         }
 
-        return claimResource(zookeeper, poolNode, poolSize);
+        return claimResource(zookeeper, poolNode, poolSize, giveUpAfter);
     }
 
     /**
@@ -415,11 +449,23 @@ public class ResourceClaim implements ZooKeeperConnectionObserver, Closeable {
         // No-op.
     }
 
+    private static void awaitLatchUnlessItTakesTooLong(CountDownLatch latch, Instant giveUpAfter)
+            throws IOException, InterruptedException {
+        if (giveUpAfter == null) {
+            latch.await();
+        } else {
+            Instant now = Instant.now();
+            if (!giveUpAfter.isAfter(now)) throw new IOException("Process timed out.");
+
+            boolean success = latch.await(Duration.between(now, giveUpAfter).toMillis(), TimeUnit.MILLISECONDS);
+            if (!success) throw new IOException("Process timed out.");
+        }
+    }
+
     /**
      * Internal state of this ResourceClaim.
      */
     public enum State {
-        UNCLAIMED,
         HAS_CLAIM,
         CLAIM_RELINQUISHED
     }

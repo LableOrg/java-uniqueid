@@ -20,6 +20,7 @@ import org.junit.Test;
 import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -46,7 +47,8 @@ public class ReconnectionIT {
                         connection,
                         64,
                         "/uniqueid",
-                        TimeUnit.SECONDS.toMillis(10)
+                        Duration.ofSeconds(10),
+                        null
                 );
             } catch (IOException e) {
                 throw new RuntimeException(e);

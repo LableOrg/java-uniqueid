@@ -20,9 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
 
 /**
  * {@link ResourceClaim} that automatically relinquishes its hold on a resource
@@ -31,19 +31,21 @@ import java.util.concurrent.TimeUnit;
 public class ExpiringResourceClaim extends ResourceClaim {
     private static final Logger logger = LoggerFactory.getLogger(ExpiringResourceClaim.class);
 
-    public final static long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
+    public final static Duration DEFAULT_CLAIM_HOLD = Duration.ofSeconds(30);
+    public final static Duration DEFAULT_ACQUISITION_TIMEOUT = Duration.ofMinutes(10);
 
     ExpiringResourceClaim(MonitoringZookeeperConnection zooKeeperConnection,
                           int poolSize,
                           String znode,
-                          long timeout) throws IOException {
-        super(zooKeeperConnection, poolSize, znode);
+                          Duration claimHold,
+                          Duration acquisitionTimeout) throws IOException {
+        super(zooKeeperConnection, poolSize, znode, acquisitionTimeout);
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
                 close();
             }
-        }, timeout);
+        }, claimHold.toMillis());
     }
 
     /**
@@ -58,7 +60,7 @@ public class ExpiringResourceClaim extends ResourceClaim {
                                               int poolSize,
                                               String znode)
             throws IOException {
-        return claimExpiring(zooKeeperConnection, poolSize, znode, DEFAULT_TIMEOUT);
+        return claimExpiring(zooKeeperConnection, poolSize, znode, DEFAULT_CLAIM_HOLD, DEFAULT_ACQUISITION_TIMEOUT);
     }
 
     /**
@@ -67,18 +69,24 @@ public class ExpiringResourceClaim extends ResourceClaim {
      * @param zooKeeperConnection ZooKeeper connection to use.
      * @param poolSize            Size of the resource pool.
      * @param znode               Root znode of the ZooKeeper resource-pool.
-     * @param timeout             Delay in milliseconds before the claim expires.
+     * @param claimHold           How long the claim should be held. May be {@code null} for the default value of
+     *                            {@link #DEFAULT_CLAIM_HOLD}.
+     * @param acquisitionTimeout  How long to keep trying to acquire a claim. May be {@code null} to keep trying
+     *                            indefinitely.
      * @return A resource claim.
      */
     public static ResourceClaim claimExpiring(MonitoringZookeeperConnection zooKeeperConnection,
                                               int poolSize,
                                               String znode,
-                                              Long timeout)
+                                              Duration claimHold,
+                                              Duration acquisitionTimeout)
             throws IOException {
 
-        long timeoutNonNull = timeout == null ? DEFAULT_TIMEOUT : timeout;
-        logger.debug("Preparing expiring resource-claim; will release it in {}ms.", timeout);
+        claimHold = claimHold == null ? DEFAULT_CLAIM_HOLD : claimHold;
+        if (logger.isDebugEnabled()) {
+            logger.debug("Preparing expiring resource-claim; will release it in {}ms.", claimHold.toMillis());
+        }
 
-        return new ExpiringResourceClaim(zooKeeperConnection, poolSize, znode, timeoutNonNull);
+        return new ExpiringResourceClaim(zooKeeperConnection, poolSize, znode, claimHold, acquisitionTimeout);
     }
 }

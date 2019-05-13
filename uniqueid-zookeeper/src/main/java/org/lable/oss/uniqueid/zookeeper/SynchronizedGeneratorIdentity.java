@@ -31,12 +31,16 @@ import java.util.function.Supplier;
  * cached or reused.
  *
  * @see #basedOn(String, String, Long)
- * @see #basedOn(String, String, Supplier)
+ * @see #basedOn(String, String, Supplier, Supplier)
  */
 public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
     final int clusterId;
+
     final Supplier<Duration> claimDurationSupplier;
+    final Supplier<Duration> acquisitionTimeoutSupplier;
+
     final String zNode;
+
     final MonitoringZookeeperConnection zooKeeperConnection;
 
     ResourceClaim resourceClaim = null;
@@ -44,31 +48,41 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
     public SynchronizedGeneratorIdentity(MonitoringZookeeperConnection zooKeeperConnection,
                                          String zNode,
                                          int clusterId,
-                                         Supplier<Duration> claimDurationSupplier) {
+                                         Supplier<Duration> claimDurationSupplier,
+                                         Supplier<Duration> acquisitionTimeoutSupplier) {
         this.zooKeeperConnection = zooKeeperConnection;
         this.zNode = zNode;
         this.clusterId = clusterId;
         this.claimDurationSupplier = claimDurationSupplier;
+        this.acquisitionTimeoutSupplier = acquisitionTimeoutSupplier == null
+                ? () -> null
+                : acquisitionTimeoutSupplier;
     }
 
     /**
      * Create a new {@link SynchronizedGeneratorIdentity} instance.
+     * <p>
+     * By using a {@link Supplier} instead of static longs for the claim duration and the acquisition timeout, these
+     * values can be dynamically reconfigured at runtime.
      *
-     * @param quorum                Addresses of the ZooKeeper quorum (comma-separated).
-     * @param znode                 Root znode of the ZooKeeper resource-pool.
-     * @param claimDurationSupplier Provides the amount of time a claim to a generator-ID should be held. By using a
-     *                              {@link Supplier} instead of a static long, this may dynamically reconfigured at
-     *                              runtime.
+     * @param quorum                     Addresses of the ZooKeeper quorum (comma-separated).
+     * @param znode                      Root znode of the ZooKeeper resource-pool.
+     * @param claimDurationSupplier      Provides the amount of time a claim to a generator-ID should be held.
+     * @param acquisitionTimeoutSupplier Provides the amount of time the process of acquiring a generator-ID may take.
+     *                                   May be {@code null} to indicate that the process may wait indefinitely.
      * @return A {@link SynchronizedGeneratorIdentity} instance.
      */
     public static SynchronizedGeneratorIdentity basedOn(String quorum,
                                                         String znode,
-                                                        Supplier<Duration> claimDurationSupplier)
+                                                        Supplier<Duration> claimDurationSupplier,
+                                                        Supplier<Duration> acquisitionTimeoutSupplier)
             throws IOException {
         MonitoringZookeeperConnection zooKeeperConnection = new MonitoringZookeeperConnection(quorum.split(","));
         int clusterId = ClusterID.get(zooKeeperConnection.getActiveConnection(), znode);
 
-        return new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, claimDurationSupplier);
+        return new SynchronizedGeneratorIdentity(
+                zooKeeperConnection, znode, clusterId, claimDurationSupplier, acquisitionTimeoutSupplier
+        );
     }
 
     /**
@@ -87,7 +101,7 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
         int clusterId = ClusterID.get(zooKeeperConnection.getActiveConnection(), znode);
         Supplier<Duration> durationSupplier = () -> Duration.ofMillis(claimDuration);
 
-        return new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, durationSupplier);
+        return new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, durationSupplier, null);
     }
 
     @Override
@@ -121,13 +135,13 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
     }
 
     private ResourceClaim acquireResourceClaim() throws GeneratorException {
-        Long claimDuration = getDurationInMillis(claimDurationSupplier);
         try {
             return ExpiringResourceClaim.claimExpiring(
                     zooKeeperConnection,
                     Blueprint.MAX_GENERATOR_ID + 1,
                     zNode,
-                    claimDuration
+                    claimDurationSupplier == null ? null : claimDurationSupplier.get(),
+                    acquisitionTimeoutSupplier.get()
             );
         } catch (IOException e) {
             throw new GeneratorException(e);

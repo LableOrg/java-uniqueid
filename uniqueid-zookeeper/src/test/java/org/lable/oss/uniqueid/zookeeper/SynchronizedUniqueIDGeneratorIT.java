@@ -68,7 +68,7 @@ public class SynchronizedUniqueIDGeneratorIT {
     @Test
     public void timeSequentialTest() throws Exception {
         SynchronizedGeneratorIdentity generatorIdentityHolder =
-                new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, 0, null);
+                new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, 0, null, null);
         IDGenerator generator = generatorFor(generatorIdentityHolder, Mode.TIME_SEQUENTIAL);
 
         Set<ByteArray> ids = new HashSet<>();

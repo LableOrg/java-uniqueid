@@ -21,6 +21,7 @@ import org.junit.rules.ExpectedException;
 import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -54,7 +55,8 @@ public class ExpiringResourceClaimIT {
                 zookeeperConnection,
                 64,
                 znode,
-                TimeUnit.SECONDS.toMillis(2)
+                Duration.ofSeconds(2),
+                null
         );
         int resource = claim.get();
         assertThat(claim.state, is(ResourceClaim.State.HAS_CLAIM));
