@@ -19,6 +19,8 @@ import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 import org.lable.oss.uniqueid.GeneratorException;
 import org.lable.oss.uniqueid.GeneratorIdentityHolder;
 import org.lable.oss.uniqueid.bytes.Blueprint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -34,6 +36,8 @@ import java.util.function.Supplier;
  * @see #basedOn(String, String, Supplier, Supplier)
  */
 public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
+    private static final Logger logger = LoggerFactory.getLogger(SynchronizedGeneratorIdentity.class);
+
     final int clusterId;
 
     final Supplier<Duration> claimDurationSupplier;
@@ -135,6 +139,10 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
     }
 
     private ResourceClaim acquireResourceClaim() throws GeneratorException {
+        return acquireResourceClaim(0);
+    }
+
+    private ResourceClaim acquireResourceClaim(int retries) throws GeneratorException {
         try {
             return ExpiringResourceClaim.claimExpiring(
                     zooKeeperConnection,
@@ -144,7 +152,15 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
                     acquisitionTimeoutSupplier.get()
             );
         } catch (IOException e) {
-            throw new GeneratorException(e);
+            logger.warn(
+                    "Connection to ZooKeeper quorum failed, retrying resource claim acquisition, attempt {}.",
+                    retries + 1
+            );
+            if (retries < 3) {
+                return acquireResourceClaim(retries + 1);
+            } else {
+                throw new GeneratorException(e);
+            }
         }
     }
 
