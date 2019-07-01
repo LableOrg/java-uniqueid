@@ -45,7 +45,7 @@ public class LocalUniqueIDGeneratorIT {
 
     @Test
     public void highGeneratorIdTest() throws Exception {
-        final int GENERATOR_ID = 255;
+        final int GENERATOR_ID = 10;
         final int CLUSTER_ID = 15;
         IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(GENERATOR_ID, CLUSTER_ID, Mode.SPREAD);
 
@@ -54,5 +54,44 @@ public class LocalUniqueIDGeneratorIT {
         Blueprint blueprint = IDBuilder.parse(id);
         assertThat(blueprint.getGeneratorId(), is(GENERATOR_ID));
         assertThat(blueprint.getClusterId(), is(CLUSTER_ID));
+    }
+
+    @Test
+    public void clockTest() throws Exception {
+        final int GENERATOR_ID = 20;
+        final int CLUSTER_ID = 15;
+        IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(
+                GENERATOR_ID,
+                CLUSTER_ID,
+                () -> 1,
+                Mode.SPREAD
+        );
+        byte[] id = null;
+        for (int i = 0; i < 64; i++) {
+            id = generator.generate();
+        }
+
+        Blueprint blueprint = IDBuilder.parse(id);
+        assertThat(blueprint.getGeneratorId(), is(GENERATOR_ID));
+        assertThat(blueprint.getClusterId(), is(CLUSTER_ID));
+        assertThat(blueprint.getTimestamp(), is(1L));
+        assertThat(blueprint.getSequence(), is(63));
+    }
+
+    @Test(expected = GeneratorException.class)
+    public void clockTestFails() throws Exception {
+        final int GENERATOR_ID = 30;
+        final int CLUSTER_ID = 15;
+        IDGenerator generator = LocalUniqueIDGeneratorFactory.generatorFor(
+                GENERATOR_ID,
+                CLUSTER_ID,
+                () -> 1,
+                Mode.SPREAD
+        );
+
+        // If the clock doesn't progress, no more then 64 ids can be generated.
+        for (int i = 0; i < 65; i++) {
+            generator.generate();
+        }
     }
 }

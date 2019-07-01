@@ -39,17 +39,31 @@ public class LocalUniqueIDGeneratorFactory {
      *
      * @param generatorId Generator ID to use (0 ≤ n ≤ 255).
      * @param clusterId   Cluster ID to use (0 ≤ n ≤ 15).
+     * @param clock       Clock implementation.
      * @param mode        Generator mode.
      * @return A thread-safe UniqueIDGenerator instance.
      */
-    public synchronized static IDGenerator generatorFor(int generatorId, int clusterId, Mode mode) {
+    public synchronized static IDGenerator generatorFor(int generatorId, int clusterId, Clock clock, Mode mode) {
         assertParameterWithinBounds("generatorId", 0, Blueprint.MAX_GENERATOR_ID, generatorId);
         assertParameterWithinBounds("clusterId", 0, Blueprint.MAX_CLUSTER_ID, clusterId);
         String generatorAndCluster = String.format("%d_%d", generatorId, clusterId);
         if (!instances.containsKey(generatorAndCluster)) {
             GeneratorIdentityHolder identityHolder = LocalGeneratorIdentity.with(clusterId, generatorId);
-            instances.putIfAbsent(generatorAndCluster, new BaseUniqueIDGenerator(identityHolder, mode));
+            instances.putIfAbsent(generatorAndCluster, new BaseUniqueIDGenerator(identityHolder, clock, mode));
         }
         return instances.get(generatorAndCluster);
+    }
+
+    /**
+     * Return the UniqueIDGenerator instance for this specific generator-ID, cluster-ID combination. If one was
+     * already created, that is returned.
+     *
+     * @param generatorId Generator ID to use (0 ≤ n ≤ 255).
+     * @param clusterId   Cluster ID to use (0 ≤ n ≤ 15).
+     * @param mode        Generator mode.
+     * @return A thread-safe UniqueIDGenerator instance.
+     */
+    public synchronized static IDGenerator generatorFor(int generatorId, int clusterId, Mode mode) {
+        return generatorFor(generatorId, clusterId, null, mode);
     }
 }

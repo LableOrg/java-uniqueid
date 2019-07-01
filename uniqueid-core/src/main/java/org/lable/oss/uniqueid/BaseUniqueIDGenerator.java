@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class BaseUniqueIDGenerator implements IDGenerator {
     protected final GeneratorIdentityHolder generatorIdentityHolder;
+    private final Clock clock;
     private final Mode mode;
 
     long previousTimestamp = 0;
@@ -45,8 +46,12 @@ public class BaseUniqueIDGenerator implements IDGenerator {
      * @param generatorIdentityHolder Generator identity holder.
      * @param mode                    Generator mode.
      */
-    public BaseUniqueIDGenerator(GeneratorIdentityHolder generatorIdentityHolder, Mode mode) {
+    public BaseUniqueIDGenerator(GeneratorIdentityHolder generatorIdentityHolder,
+                                 Clock clock,
+                                 Mode mode) {
         this.generatorIdentityHolder = generatorIdentityHolder;
+        // Fall back to the default wall clock if no alternative is passed.
+        this.clock = clock == null ? System::currentTimeMillis : clock;
         this.mode = mode == null ? Mode.defaultMode() : mode;
     }
 
@@ -55,8 +60,16 @@ public class BaseUniqueIDGenerator implements IDGenerator {
      */
     @Override
     public synchronized byte[] generate() throws GeneratorException {
+        return generate(0);
+    }
 
-        long now = System.currentTimeMillis();
+    synchronized byte[] generate(int attempt) throws GeneratorException {
+        // To prevent the generator from becoming stuck in a loop when the supplied clock
+        // doesn't progress, this safety valve will trigger after waiting too long for the
+        // next clock tick.
+        if (attempt > 10) throw new GeneratorException("Clock supplied to generator failed to progress.");
+
+        long now = clock.currentTimeMillis();
         if (now == previousTimestamp) {
             sequence++;
         } else {
@@ -64,8 +77,8 @@ public class BaseUniqueIDGenerator implements IDGenerator {
         }
         if (sequence > Blueprint.MAX_SEQUENCE_COUNTER) {
             try {
-                TimeUnit.MILLISECONDS.sleep(1);
-                return generate();
+                TimeUnit.MICROSECONDS.sleep(400);
+                return generate(attempt + 1);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

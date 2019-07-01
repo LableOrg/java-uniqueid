@@ -17,6 +17,7 @@ package org.lable.oss.uniqueid.zookeeper;
 
 import org.lable.oss.dynamicconfig.zookeeper.MonitoringZookeeperConnection;
 import org.lable.oss.uniqueid.BaseUniqueIDGenerator;
+import org.lable.oss.uniqueid.Clock;
 import org.lable.oss.uniqueid.GeneratorIdentityHolder;
 import org.lable.oss.uniqueid.IDGenerator;
 import org.lable.oss.uniqueid.bytes.Mode;
@@ -45,6 +46,33 @@ public class SynchronizedUniqueIDGeneratorFactory {
      *
      * @param zooKeeperConnection Connection to the ZooKeeper quorum.
      * @param znode               Base-path of the resource pool in ZooKeeper.
+     * @param clock               Clock implementation.
+     * @param mode                Generator mode.
+     * @return An instance of this class.
+     * @throws IOException Thrown when something went wrong trying to find the cluster ID or trying to claim a
+     *                     generator ID.
+     */
+    public static synchronized IDGenerator generatorFor(MonitoringZookeeperConnection zooKeeperConnection,
+                                                        String znode,
+                                                        Clock clock,
+                                                        Mode mode)
+            throws IOException {
+
+        if (!instances.containsKey(znode)) {
+            final int clusterId = ClusterID.get(zooKeeperConnection.getActiveConnection(), znode);
+            SynchronizedGeneratorIdentity generatorIdentityHolder =
+                    new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, null, null);
+
+            return generatorFor(generatorIdentityHolder, clock, mode);
+        }
+        return instances.get(znode);
+    }
+
+    /**
+     * Get the synchronized ID generator instance.
+     *
+     * @param zooKeeperConnection Connection to the ZooKeeper quorum.
+     * @param znode               Base-path of the resource pool in ZooKeeper.
      * @param mode                Generator mode.
      * @return An instance of this class.
      * @throws IOException Thrown when something went wrong trying to find the cluster ID or trying to claim a
@@ -54,15 +82,7 @@ public class SynchronizedUniqueIDGeneratorFactory {
                                                         String znode,
                                                         Mode mode)
             throws IOException {
-
-        if (!instances.containsKey(znode)) {
-            final int clusterId = ClusterID.get(zooKeeperConnection.getActiveConnection(), znode);
-            SynchronizedGeneratorIdentity generatorIdentityHolder =
-                    new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, clusterId, null, null);
-
-            return generatorFor(generatorIdentityHolder, mode);
-        }
-        return instances.get(znode);
+        return generatorFor(zooKeeperConnection, znode, null, mode);
     }
 
     /**
@@ -70,19 +90,21 @@ public class SynchronizedUniqueIDGeneratorFactory {
      *
      * @param synchronizedGeneratorIdentity An instance of {@link SynchronizedGeneratorIdentity} to (re)use for
      *                                      acquiring the generator ID.
+     * @param clock                         Clock implementation.
      * @param mode                          Generator mode.
      * @return An instance of this class.
      * @throws IOException Thrown when something went wrong trying to find the cluster ID or trying to claim a
      *                     generator ID.
      */
     public static synchronized IDGenerator generatorFor(SynchronizedGeneratorIdentity synchronizedGeneratorIdentity,
+                                                        Clock clock,
                                                         Mode mode)
             throws IOException {
 
         String instanceKey = synchronizedGeneratorIdentity.getZNode();
         if (!instances.containsKey(instanceKey)) {
             logger.debug("Creating new instance.");
-            instances.putIfAbsent(instanceKey, new BaseUniqueIDGenerator(synchronizedGeneratorIdentity, mode));
+            instances.putIfAbsent(instanceKey, new BaseUniqueIDGenerator(synchronizedGeneratorIdentity, clock, mode));
         }
         return instances.get(instanceKey);
     }

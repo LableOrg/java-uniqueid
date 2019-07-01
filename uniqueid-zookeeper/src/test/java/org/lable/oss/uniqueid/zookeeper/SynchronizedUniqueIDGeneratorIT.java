@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -67,9 +68,20 @@ public class SynchronizedUniqueIDGeneratorIT {
 
     @Test
     public void timeSequentialTest() throws Exception {
-        SynchronizedGeneratorIdentity generatorIdentityHolder =
-                new SynchronizedGeneratorIdentity(zooKeeperConnection, znode, 0, null, null);
-        IDGenerator generator = generatorFor(generatorIdentityHolder, Mode.TIME_SEQUENTIAL);
+        // Explicitly implement a clock ourselves for testing.
+        AtomicLong time = new AtomicLong(1_500_000_000);
+        SynchronizedGeneratorIdentity generatorIdentityHolder = new SynchronizedGeneratorIdentity(
+                zooKeeperConnection,
+                znode,
+                0,
+                null,
+                null
+        );
+        IDGenerator generator = generatorFor(
+                generatorIdentityHolder,
+                time::getAndIncrement,
+                Mode.TIME_SEQUENTIAL
+        );
 
         Set<ByteArray> ids = new HashSet<>();
         for (int i = 0; i < 100_000; i++) {
