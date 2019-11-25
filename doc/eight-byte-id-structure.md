@@ -9,7 +9,7 @@ TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTSSSSSS ...MGGGG GGGGCCCC
 |                                              |      |  ||        |
 v                                              |      |  |\        |
                                                |      v  \ \       |
-Date of ID creation, meausred in milliseconds  |          \ \      |
+Date of ID creation, measured in milliseconds  |          \ \      |
 ellapsed since 1970-01-01T00:00:00.000,        | Reserved  \ \     |
 represented in reverse byte-order (in SPREAD   | for future | |    |
 mode) to guarantee an even spread of IDs.      | use.       | |    |
@@ -59,7 +59,7 @@ resulting ID is unique. Secondly, the timestamp is a permanent record of the dat
 creation of the ID, which may be useful if is used as ID for a database record the moment
 it is created.
 
-Because of the limited bitsize of the timestamp, only dates until the year2109 are supported.
+Because of the limited bit-size of the timestamp, only dates until the year 2109 are supported.
 As this library generates only 'now' timestamps, this should not be practical limitation.
 
 ### Sequence counter

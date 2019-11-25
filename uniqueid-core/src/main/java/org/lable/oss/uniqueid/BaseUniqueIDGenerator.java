@@ -47,6 +47,18 @@ public class BaseUniqueIDGenerator implements IDGenerator {
      * @param mode                    Generator mode.
      */
     public BaseUniqueIDGenerator(GeneratorIdentityHolder generatorIdentityHolder,
+                                 Mode mode) {
+        this(generatorIdentityHolder, null, mode);
+    }
+
+    /**
+     * Create a new UniqueIDGenerator instance.
+     *
+     * @param generatorIdentityHolder Generator identity holder.
+     * @param clock                   System clock (optional; useful for tests).
+     * @param mode                    Generator mode.
+     */
+    public BaseUniqueIDGenerator(GeneratorIdentityHolder generatorIdentityHolder,
                                  Clock clock,
                                  Mode mode) {
         this.generatorIdentityHolder = generatorIdentityHolder;

@@ -75,7 +75,7 @@ limited number of 'clusters' exists). The generator-ID can also be assigned manu
 usually it is desirable for processes to be able to exclusively claim a generator-ID
 automatically.
 
-This library facilitates this using [ZooKeeper](http://zookeeper.apache.org/).
+This library facilitates this using [Etcd](https://etcd.io/) or [Apache ZooKeeper](http://zookeeper.apache.org/).
 Generators can stake a claim on a generator-ID for a short period of time (usually ten
 minutes), and repeat this whenever IDs are generated.
 
@@ -122,25 +122,135 @@ For local usage the `uniqueid-core` module can be used:
 </dependency>
 ```
 
-### Distributed usage with a ZooKeeper quorum
+### Distributed usage
 
 If you need to generate unique IDs within a distributed environment, automatic coordination of
 the generator-ID is also a possibility. The acquisition of a generator-ID can be handled by a
-`SynchronizedGeneratorIdentity` instance, which uses
-[Apache ZooKeeper](http://zookeeper.apache.org/) to claim its generator-ID — for a short while,
-or as long as it maintains a connection to the ZooKeeper quorum.
+`SynchronizedGeneratorIdentity` instance, which uses [Etcd](https://etcd.io/) or
+[Apache ZooKeeper](http://zookeeper.apache.org/) to claim its generator-ID 
 
-For this functionality the `uniqueid-zookeeper` module is used:
+#### With an Etcd cluster
+
+For this Etcd the `uniqueid-etcd` module is used:
 
 ```xml
 <dependency>
   <groupId>org.lable.oss.uniqueid</groupId>
-  <artifactId>uniqueid-core</artifactId>
+  <artifactId>uniqueid-etcd</artifactId>
   <version>${uniqueid.version}</version>
 </dependency>
 ```
 
-#### Preparing the ZooKeeper quorum
+##### Preparing the Etcd cluster
+
+To use this method of generator-ID acquisition, a namespace on the Etcd cluster must
+be chosen to hold the resource pool used by `SynchronizedGeneratorIdentity`.
+
+For example, if you choose `unique-id-generator/` as the namespace, these keys can be
+automatically created when the library is used:
+
+```
+unique-id-generator/cluster-id
+unique-id-generator/pool/0
+unique-id-generator/pool/1
+…
+unique-id-generator/pool/255
+```
+
+Note that if you do not create the `cluster-id` key yourself (recommended), the default
+value of `0` will be used. To use a different cluster ID, set the content of this key to
+one of the 16 permissible values (i.e., `0..15`).
+
+If you have access to the `etcdctl` command line utility you can set the
+cluster-ID like so:
+
+```
+etcdctl  --endpoints=… put unique-id-generator/cluster-id 1
+```
+
+##### Using the generator
+
+To use an `IDGenerator` with a negotiated generator-Id, create a new instance like this:
+
+```java
+// Change the values of etcdCluster and namespace as needed:
+final List<String> etcdCluster = Arrays.asList("https://etcd1:2379","https://etcd2:2379","https://etcd3:2379");
+final String namespace = "unique-id-generator/";
+final ByteSequence ns = ByteSequence.from(namespace, StandardCharsets.UTF_8);
+final Client client = Client.builder()
+        .endpoints(etcdCluster)
+        .namespace(ns)
+        .build();
+IDGenerator generator = SynchronizedUniqueIDGeneratorFactory.generatorFor(client, Mode.SPREAD);
+// ...
+byte[] id = generator.generate()
+// ...
+```
+
+If you expect that you will be using dozens of IDs in a single process, it is more
+efficient to generate IDs in batches:
+
+```java
+Deque<byte[]> ids = generator.batch(500);
+// ...
+byte[] id = ids.pop();
+// etc.
+```
+
+If you intend to generate more than a few IDs at a time, you can also wrap the generator in
+an `AutoRefillStack`, and simply call `generate()` on that whenever you need a new ID.
+It will grab IDs in batches from the wrapped `IDGenerator` instance for you. This is
+probably the simplest and safest way to use an `IDGenerator` in the default `SPREAD` mode.
+
+```java
+final List<String> etcdCluster = Arrays.asList("https://etcd1:2379","https://etcd2:2379","https://etcd3:2379");
+final String namespace = "unique-id-generator/";
+final ByteSequence ns = ByteSequence.from(namespace, StandardCharsets.UTF_8);
+final Client client = Client.builder()
+        .endpoints(etcdCluster)
+        .namespace(ns)
+        .build();
+IDGenerator generator = new AutoRefillStack(
+    SynchronizedUniqueIDGeneratorFactory.generatorFor(client, Mode.SPREAD)
+);
+// ...
+byte[] id = generator.generate()
+// ...
+```
+
+For the `TIME_SEQUENTIAL` mode the above is usually not what you want, if you intend to use
+the timestamp stored in the generated ID as part of your data model (the batched pre-generated
+IDs might have a timestamp that lies further in the past then you might want).
+
+```java
+final List<String> etcdCluster = Arrays.asList("https://etcd1:2379","https://etcd2:2379","https://etcd3:2379");
+final String namespace = "unique-id-generator/";
+final ByteSequence ns = ByteSequence.from(namespace, StandardCharsets.UTF_8);
+final Client client = Client.builder()
+        .endpoints(etcdCluster)
+        .namespace(ns)
+        .build();
+IDGenerator generator = SynchronizedUniqueIDGeneratorFactory.generatorFor(client, Mode.TIME_SEQUENTIAL);
+// ...
+byte[] id = generator.generate()
+// Extract the timestamp in the ID.
+long createdAt = IDBuilder.parseTimestamp(id);
+```
+
+
+#### With a ZooKeeper quorum
+
+For ZooKeeper the `uniqueid-zookeeper` module is used:
+
+```xml
+<dependency>
+  <groupId>org.lable.oss.uniqueid</groupId>
+  <artifactId>uniqueid-zookeeper</artifactId>
+  <version>${uniqueid.version}</version>
+</dependency>
+```
+
+##### Preparing the ZooKeeper quorum
 
 To use this method of generator-ID acquisition, a node on the ZooKeeper quorum must
 be chosen to hold the queue and resource pool used by `SynchronizedGeneratorIdentity`.
@@ -172,7 +282,7 @@ Or if the node already exists:
 set /unique-id-generator/cluster-id 1
 ```
 
-#### Using the generator
+##### Using the generator
 
 To use an `IDGenerator` with a negotiated generator-Id, create a new instance like this:
 
@@ -219,7 +329,7 @@ IDs might have a timestamp that lies further in the past then you might want).
 ```java
 final String zookeeperQuorum = "zookeeper1,zookeeper2,zookeeper3";
 final String znode = "/unique-id-generator";
-IDGenerator SynchronizedUniqueIDGeneratorFactory.generatorFor(zookeeperQuorum, znode, Mode.TIME_SEQUENTIAL);
+IDGenerator generator = SynchronizedUniqueIDGeneratorFactory.generatorFor(zookeeperQuorum, znode, Mode.TIME_SEQUENTIAL);
 // ...
 byte[] id = generator.generate()
 // Extract the timestamp in the ID.
