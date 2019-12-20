@@ -17,15 +17,8 @@ package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.CloseableClient;
 import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
-import io.etcd.jetcd.lease.LeaseGrantResponse;
-import io.etcd.jetcd.lease.LeaseKeepAliveResponse;
-import io.etcd.jetcd.lock.LockResponse;
-import io.etcd.jetcd.lock.UnlockResponse;
-import io.grpc.stub.StreamObserver;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -33,7 +26,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
+import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -44,6 +37,7 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.core.CombinableMatcher.both;
 import static org.junit.Assert.assertThat;
 import static org.lable.oss.uniqueid.etcd.ResourceClaim.POOL_PREFIX;
+import static org.lable.oss.uniqueid.etcd.ResourceClaim.resourceKey;
 
 public class ExpiringResourceClaimIT {
     @Rule
@@ -69,16 +63,17 @@ public class ExpiringResourceClaimIT {
         ResourceClaim claim = ExpiringResourceClaim.claimExpiring(
                 client,
                 64,
+                Collections.singletonList(5),
                 Duration.ofSeconds(4),
                 null
         );
-        int resource = claim.get();
+        int resource = claim.getGeneratorId();
         assertThat(claim.state, is(ResourceClaim.State.HAS_CLAIM));
         assertThat(resource, is(both(greaterThanOrEqualTo(0)).and(lessThan(64))));
 
         TimeUnit.SECONDS.sleep(2);
 
-        int resource2 = claim.get();
+        int resource2 = claim.getGeneratorId();
         assertThat(claim.state, is(ResourceClaim.State.HAS_CLAIM));
         assertThat(resource, is(resource2));
 
@@ -88,7 +83,7 @@ public class ExpiringResourceClaimIT {
         assertThat(claim.state, is(ResourceClaim.State.CLAIM_RELINQUISHED));
         thrown.expect(IllegalStateException.class);
         thrown.expectMessage("Resource claim not held.");
-        claim.get();
+        claim.getGeneratorId();
     }
 
     @Test
@@ -96,23 +91,24 @@ public class ExpiringResourceClaimIT {
         ResourceClaim claim = ExpiringResourceClaim.claimExpiring(
                 client,
                 64,
+                Collections.singletonList(5),
                 // Very long expiration that shouldn't interfere with this test.
                 Duration.ofSeconds(20),
                 null
         );
-        int resource = claim.get();
+        int resource = claim.getGeneratorId();
         assertThat(claim.state, is(ResourceClaim.State.HAS_CLAIM));
         assertThat(resource, is(both(greaterThanOrEqualTo(0)).and(lessThan(64))));
 
         // Remove resource manually. Claim should get relinquished via watcher.
-        EtcdHelper.delete(client, POOL_PREFIX + resource);
+        EtcdHelper.delete(client, resourceKey(claim.getClusterId(), claim.getGeneratorId()));
 
         TimeUnit.MILLISECONDS.sleep(500);
 
         assertThat(claim.state, is(ResourceClaim.State.CLAIM_RELINQUISHED));
         thrown.expect(IllegalStateException.class);
         thrown.expectMessage("Resource claim not held.");
-        claim.get();
+        claim.getGeneratorId();
     }
 
     @Test
@@ -120,11 +116,12 @@ public class ExpiringResourceClaimIT {
         ResourceClaim claim = ExpiringResourceClaim.claimExpiring(
                 client,
                 64,
+                Collections.singletonList(5),
                 // Very long expiration that shouldn't interfere with this test.
                 Duration.ofSeconds(20),
                 null
         );
-        int resource = claim.get();
+        int resource = claim.getGeneratorId();
         assertThat(claim.state, is(ResourceClaim.State.HAS_CLAIM));
         assertThat(resource, is(both(greaterThanOrEqualTo(0)).and(lessThan(64))));
 
@@ -134,6 +131,6 @@ public class ExpiringResourceClaimIT {
 
         thrown.expect(IllegalStateException.class);
         thrown.expectMessage("Resource claim not held.");
-        claim.get();
+        claim.getGeneratorId();
     }
 }

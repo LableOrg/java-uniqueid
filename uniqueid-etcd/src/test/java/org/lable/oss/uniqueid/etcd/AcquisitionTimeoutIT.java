@@ -25,6 +25,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
@@ -80,11 +81,12 @@ public class AcquisitionTimeoutIT {
         ResourceClaim claim = ExpiringResourceClaim.claimExpiring(
                 client,
                 64,
+                Collections.singletonList(5),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(2)
         );
 
-        claim.get();
+        claim.getGeneratorId();
         claim.close();
     }
 
@@ -108,11 +110,12 @@ public class AcquisitionTimeoutIT {
         ResourceClaim claim = ExpiringResourceClaim.claimExpiring(
                 client,
                 64,
+                Collections.singletonList(5),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(5)
         );
 
-        int resource = claim.get();
+        int resource = claim.getGeneratorId();
         assertThat(claim.state, is(ResourceClaim.State.HAS_CLAIM));
         assertThat(resource, is(both(greaterThanOrEqualTo(0)).and(lessThan(64))));
 

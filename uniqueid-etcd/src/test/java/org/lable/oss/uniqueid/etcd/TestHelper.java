@@ -19,15 +19,19 @@ import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static org.lable.oss.uniqueid.etcd.ClusterID.CLUSTER_ID_KEY;
 
 public class TestHelper {
 
-    public static void prepareClusterID(Client etcd, int clusterId) throws ExecutionException, InterruptedException {
+    public static void prepareClusterID(Client etcd, int... clusterId) throws ExecutionException, InterruptedException {
+        String serialized = Arrays.stream(clusterId).boxed().map(String::valueOf).collect(Collectors.joining(", "));
+
         etcd.getKVClient()
-                .put(CLUSTER_ID_KEY, ByteSequence.from(String.valueOf(clusterId), StandardCharsets.UTF_8))
+                .put(CLUSTER_ID_KEY, ByteSequence.from(serialized, StandardCharsets.UTF_8))
                 .get();
     }
 }

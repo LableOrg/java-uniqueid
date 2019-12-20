@@ -23,9 +23,10 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
 
 public class ClusterIDIT {
@@ -41,9 +42,9 @@ public class ClusterIDIT {
                 .namespace(ns)
                 .build();
 
-        int id = ClusterID.get(client);
+        List<Integer> ids = ClusterID.get(client);
 
-        assertThat(id, is(0));
+        assertThat(ids, contains(0));
     }
 
     @Test
@@ -57,8 +58,38 @@ public class ClusterIDIT {
 
         client.getKVClient().put(ClusterID.CLUSTER_ID_KEY, ByteSequence.from("12".getBytes())).get();
 
-        int id = ClusterID.get(client);
+        List<Integer> ids = ClusterID.get(client);
 
-        assertThat(id, is(12));
+        assertThat(ids, contains(12));
+    }
+
+    @Test
+    public void preconfiguredMultipleTest() throws ExecutionException, InterruptedException, IOException {
+        ByteSequence ns = ByteSequence.from("unique-id/", StandardCharsets.UTF_8);
+
+        Client client = Client.builder()
+                .endpoints(etcd.getClientEndpoints())
+                .namespace(ns)
+                .build();
+
+        client.getKVClient().put(ClusterID.CLUSTER_ID_KEY, ByteSequence.from("12, 13".getBytes())).get();
+
+        List<Integer> ids = ClusterID.get(client);
+
+        assertThat(ids, contains(12, 13));
+    }
+
+    @Test(expected = IOException.class)
+    public void invalidValueTest() throws ExecutionException, InterruptedException, IOException {
+        ByteSequence ns = ByteSequence.from("unique-id/", StandardCharsets.UTF_8);
+
+        Client client = Client.builder()
+                .endpoints(etcd.getClientEndpoints())
+                .namespace(ns)
+                .build();
+
+        client.getKVClient().put(ClusterID.CLUSTER_ID_KEY, ByteSequence.from("BOGUS".getBytes())).get();
+
+        ClusterID.get(client);
     }
 }

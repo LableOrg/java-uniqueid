@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -35,10 +36,11 @@ public class ExpiringResourceClaim extends ResourceClaim {
     public final static Duration DEFAULT_ACQUISITION_TIMEOUT = Duration.ofMinutes(10);
 
     ExpiringResourceClaim(Client etcd,
-                          int poolSize,
+                          int maxGeneratorCount,
+                          List<Integer> clusterIds,
                           Duration claimHold,
                           Duration acquisitionTimeout) throws IOException {
-        super(etcd, poolSize, acquisitionTimeout);
+        super(etcd, maxGeneratorCount, clusterIds, acquisitionTimeout);
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
@@ -50,20 +52,21 @@ public class ExpiringResourceClaim extends ResourceClaim {
     /**
      * Claim a resource.
      *
-     * @param etcd     Etcd connection to use.
-     * @param poolSize Size of the resource pool.
+     * @param etcd              Etcd connection to use.
+     * @param maxGeneratorCount Maximum number of generators possible.
      * @return A resource claim.
      */
-    public static ResourceClaim claimExpiring(Client etcd, int poolSize)
+    public static ResourceClaim claimExpiring(Client etcd, int maxGeneratorCount, List<Integer> clusterIds)
             throws IOException {
-        return claimExpiring(etcd, poolSize, DEFAULT_CLAIM_HOLD, DEFAULT_ACQUISITION_TIMEOUT);
+        return claimExpiring(etcd, maxGeneratorCount, clusterIds, DEFAULT_CLAIM_HOLD, DEFAULT_ACQUISITION_TIMEOUT);
     }
 
     /**
      * Claim a resource.
      *
      * @param etcd               Etcd connection to use.
-     * @param poolSize           Size of the resource pool.
+     * @param maxGeneratorCount  Maximum number of generators possible.
+     * @param clusterIds         Cluster Ids available to use.
      * @param claimHold          How long the claim should be held. May be {@code null} for the default value of
      *                           {@link #DEFAULT_CLAIM_HOLD}.
      * @param acquisitionTimeout How long to keep trying to acquire a claim. May be {@code null} to keep trying
@@ -71,7 +74,8 @@ public class ExpiringResourceClaim extends ResourceClaim {
      * @return A resource claim.
      */
     public static ResourceClaim claimExpiring(Client etcd,
-                                              int poolSize,
+                                              int maxGeneratorCount,
+                                              List<Integer> clusterIds,
                                               Duration claimHold,
                                               Duration acquisitionTimeout)
             throws IOException {
@@ -81,6 +85,6 @@ public class ExpiringResourceClaim extends ResourceClaim {
             logger.debug("Preparing expiring resource-claim; will release it in {}ms.", claimHold.toMillis());
         }
 
-        return new ExpiringResourceClaim(etcd, poolSize, claimHold, acquisitionTimeout);
+        return new ExpiringResourceClaim(etcd, maxGeneratorCount, clusterIds, claimHold, acquisitionTimeout);
     }
 }

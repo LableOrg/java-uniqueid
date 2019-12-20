@@ -31,10 +31,7 @@ import org.lable.oss.uniqueid.bytes.Mode;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -79,7 +76,7 @@ public class SynchronizedUniqueIDGeneratorIT {
         AtomicLong time = new AtomicLong(1_500_000_000);
         SynchronizedGeneratorIdentity generatorIdentityHolder = new SynchronizedGeneratorIdentity(
                 client,
-                0,
+                Collections.singletonList(0),
                 null,
                 null
         );

@@ -56,7 +56,8 @@ public class ResourceClaim implements Closeable {
 
     final static Logger logger = LoggerFactory.getLogger(ResourceClaim.class);
 
-    final int resource;
+    final int clusterId;
+    final int generatorId;
 
     final int poolSize;
     final Client etcd;
@@ -67,14 +68,17 @@ public class ResourceClaim implements Closeable {
 
     protected List<Closeable> closeables = new ArrayList<>();
 
-    ResourceClaim(Client etcd, int poolSize, Duration timeout) throws IOException {
+    ResourceClaim(Client etcd,
+                  int maxGeneratorCount,
+                  List<Integer> clusterIds,
+                  Duration timeout) throws IOException {
         state = State.INITIALIZING;
         logger.debug("Acquiring resource-claim…");
 
         timeout = timeout == null ? Duration.ofMinutes(5) : timeout;
         Instant giveUpAfter = Instant.now().plus(timeout);
 
-        this.poolSize = poolSize;
+        this.poolSize = maxGeneratorCount;
         this.etcd = etcd;
         try {
             LeaseGrantResponse lease = etcd.getLeaseClient().grant(5).get();
@@ -101,7 +105,9 @@ public class ResourceClaim implements Closeable {
                 logger.debug("Acquired lock: {}.", lock.getKey().toString(StandardCharsets.UTF_8));
             }
 
-            this.resource = claimResource(etcd, poolSize, giveUpAfter);
+            ResourcePair resourcePair = claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter);
+            this.clusterId = resourcePair.clusterId;
+            this.generatorId = resourcePair.generatorId;
 
             // Release the lock. If this line is not reached due to exceptions raised, the lock will automatically
             // be removed when the lease holding it expires.
@@ -116,32 +122,36 @@ public class ResourceClaim implements Closeable {
         }
         state = State.HAS_CLAIM;
 
-        logger.debug("Resource-claim acquired ({}).", resource);
+        logger.debug("Resource-claim acquired ({}/{}).", clusterId, generatorId);
     }
 
     /**
      * Claim a resource.
      *
-     * @param etcd     Etcd connection.
-     * @param poolSize Size of the resource pool.
-     * @return A resource claim.
-     */
-    public static ResourceClaim claim(Client etcd, int poolSize) throws IOException {
-        return new ResourceClaim(etcd, poolSize, Duration.ofMinutes(10));
-    }
-
-    /**
-     * Claim a resource.
-     *
-     * @param etcd     Etcd connection.
-     * @param poolSize Size of the resource pool.
-     * @param timeout  Time out if the process takes longer than this.
+     * @param etcd              Etcd connection.
+     * @param maxGeneratorCount Maximum number of generators possible.
      * @return A resource claim.
      */
     public static ResourceClaim claim(Client etcd,
-                                      int poolSize,
+                                      int maxGeneratorCount,
+                                      List<Integer> clusterIds) throws IOException {
+        return new ResourceClaim(etcd, maxGeneratorCount, clusterIds, Duration.ofMinutes(10));
+    }
+
+    /**
+     * Claim a resource.
+     *
+     * @param etcd              Etcd connection.
+     * @param maxGeneratorCount Maximum number of generators possible.
+     * @param clusterIds        Cluster Ids available to use.
+     * @param timeout           Time out if the process takes longer than this.
+     * @return A resource claim.
+     */
+    public static ResourceClaim claim(Client etcd,
+                                      int maxGeneratorCount,
+                                      List<Integer> clusterIds,
                                       Duration timeout) throws IOException {
-        return new ResourceClaim(etcd, poolSize, timeout);
+        return new ResourceClaim(etcd, maxGeneratorCount, clusterIds, timeout);
     }
 
     /**
@@ -150,11 +160,18 @@ public class ResourceClaim implements Closeable {
      * @return The resource claimed.
      * @throws IllegalStateException Thrown when the claim is no longer held.
      */
-    public int get() {
+    public int getClusterId() {
         if (state != State.HAS_CLAIM) {
             throw new IllegalStateException("Resource claim not held.");
         }
-        return resource;
+        return clusterId;
+    }
+
+    public int getGeneratorId() {
+        if (state != State.HAS_CLAIM) {
+            throw new IllegalStateException("Resource claim not held.");
+        }
+        return generatorId;
     }
 
     /**
@@ -171,7 +188,7 @@ public class ResourceClaim implements Closeable {
         }
         state = State.CLAIM_RELINQUISHED;
 
-        logger.debug("Closing resource-claim ({}).", resource);
+        logger.debug("Closing resource-claim ({}).", resourceKey(clusterId, generatorId));
 
         // No need to delete the node if the reason we are closing is the deletion of said node.
         if (nodeAlreadyDeleted) return;
@@ -184,7 +201,7 @@ public class ResourceClaim implements Closeable {
             new Timer().schedule(new TimerTask() {
                 @Override
                 public void run() {
-                    relinquishResource(etcd, resource);
+                    relinquishResource();
                 }
                 // Two seconds seems reasonable. The NTP docs state that clocks running more than 128ms out of sync are
                 // rare under normal conditions.
@@ -203,15 +220,18 @@ public class ResourceClaim implements Closeable {
     /**
      * Try to claim an available resource from the resource pool.
      *
-     * @param etcd        Etcd connection.
-     * @param poolSize    Size of the resource pool.
-     * @param giveUpAfter Give up after this instant in time.
+     * @param etcd              Etcd connection.
+     * @param maxGeneratorCount Maximum number of generators possible.
+     * @param clusterIds        Cluster Ids available to use.
+     * @param giveUpAfter       Give up after this instant in time.
      * @return The claimed resource.
      */
-    int claimResource(Client etcd, int poolSize, Instant giveUpAfter)
+    ResourcePair claimResource(Client etcd, int maxGeneratorCount, List<Integer> clusterIds, Instant giveUpAfter)
             throws InterruptedException, IOException, ExecutionException {
 
         logger.debug("Trying to claim a resource.");
+
+        int poolSize = maxGeneratorCount * clusterIds.size();
 
         GetOption getOptions = GetOption.newBuilder()
                 .withKeysOnly(true)
@@ -234,63 +254,68 @@ public class ResourceClaim implements Closeable {
             );
             awaitLatchUnlessItTakesTooLong(latch, giveUpAfter);
             watcher.close();
-            return claimResource(etcd, poolSize, giveUpAfter);
+            return claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter);
         }
 
         // Try to claim an available resource.
-        for (int i = 0; i < poolSize; i++) {
-            ByteSequence resourcePath = resourceKey(i);
-            if (!claimedResources.contains(resourcePath)) {
-                logger.debug("Trying to claim seemingly available resource {}.", POOL_PREFIX + i);
-                TxnResponse txnResponse = etcd.getKVClient().txn()
-                        .If(
-                                // Version == 0 means the key does not exist.
-                                new Cmp(resourcePath, Cmp.Op.EQUAL, CmpTarget.version(0))
-                        ).Then(
-                                Op.put(
-                                        resourcePath,
-                                        ByteSequence.EMPTY,
-                                        PutOption.newBuilder().withLeaseId(leaseId).build()
-                                )
-                        ).commit().get();
+        for (Integer clusterId : clusterIds) {
+            for (int generatorId = 0; generatorId < maxGeneratorCount; generatorId++) {
+                String resourcePathString = resourceKey(clusterId, generatorId);
+                ByteSequence resourcePath = ByteSequence.from(resourcePathString, StandardCharsets.UTF_8);
+                if (!claimedResources.contains(resourcePath)) {
+                    logger.debug("Trying to claim seemingly available resource {}.", resourcePathString);
+                    TxnResponse txnResponse = etcd.getKVClient().txn()
+                            .If(
+                                    // Version == 0 means the key does not exist.
+                                    new Cmp(resourcePath, Cmp.Op.EQUAL, CmpTarget.version(0))
+                            ).Then(
+                                    Op.put(
+                                            resourcePath,
+                                            ByteSequence.EMPTY,
+                                            PutOption.newBuilder().withLeaseId(leaseId).build()
+                                    )
+                            ).commit().get();
 
-                if (!txnResponse.isSucceeded()) {
-                    // Failed to claim this resource for some reason.
-                    continue;
-                }
-
-                closeables.add(etcd.getWatchClient().watch(resourcePath, watchResponse -> {
-                    for (WatchEvent event : watchResponse.getEvents()) {
-                        if (event.getEventType() == WatchEvent.EventType.DELETE) {
-                            // Invalidate our claim when the node is deleted by some other process.
-                            logger.debug("Resource-claim node unexpectedly deleted ({})", resource);
-                            close(true);
-                        }
+                    if (!txnResponse.isSucceeded()) {
+                        // Failed to claim this resource for some reason.
+                        continue;
                     }
-                }));
 
-                logger.debug("Successfully claimed resource {}.", POOL_PREFIX + i);
-                return i;
+                    closeables.add(etcd.getWatchClient().watch(resourcePath, watchResponse -> {
+                        for (WatchEvent event : watchResponse.getEvents()) {
+                            if (event.getEventType() == WatchEvent.EventType.DELETE) {
+                                // Invalidate our claim when the node is deleted by some other process.
+                                logger.debug("Resource-claim node unexpectedly deleted ({})", resourcePathString);
+                                close(true);
+                            }
+                        }
+                    }));
+
+                    logger.debug("Successfully claimed resource {}.", resourcePathString);
+                    return new ResourcePair(clusterId, generatorId);
+                }
             }
         }
 
-        return claimResource(etcd, poolSize, giveUpAfter);
+        return claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter);
     }
 
     /**
      * Relinquish a claimed resource.
-     *
-     * @param etcd     Etcd connection.
-     * @param resource The resource.
      */
-    private void relinquishResource(Client etcd, int resource) {
-        logger.debug("Relinquishing claimed resource {}.", resource);
-
-        etcd.getLeaseClient().revoke(leaseId);
+    private void relinquishResource() {
+        logger.debug("Relinquishing claimed resource {}:{}.", clusterId, generatorId);
+        try {
+            etcd.getLeaseClient().revoke(leaseId).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            logger.error("Failed to revoke Etcd lease.", e);
+        }
     }
 
-    static ByteSequence resourceKey(int resource) {
-        return ByteSequence.from(POOL_PREFIX + resource, StandardCharsets.UTF_8);
+    static String resourceKey(Integer clusterId, int generatorId) {
+        return POOL_PREFIX + clusterId + ":" + generatorId;
     }
 
     private void awaitLatchUnlessItTakesTooLong(CountDownLatch latch, Instant giveUpAfter)
@@ -316,5 +341,15 @@ public class ResourceClaim implements Closeable {
         INITIALIZING,
         HAS_CLAIM,
         CLAIM_RELINQUISHED
+    }
+
+    static class ResourcePair {
+        int clusterId;
+        int generatorId;
+
+        public ResourcePair(Integer clusterId, int generatorId) {
+            this.clusterId = clusterId;
+            this.generatorId = generatorId;
+        }
     }
 }

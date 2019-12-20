@@ -21,12 +21,9 @@ import org.lable.oss.uniqueid.Clock;
 import org.lable.oss.uniqueid.GeneratorIdentityHolder;
 import org.lable.oss.uniqueid.IDGenerator;
 import org.lable.oss.uniqueid.bytes.Mode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 /**
  * Create an {@link IDGenerator} capable of generating unique identifiers in a distributed environment with multiple
@@ -38,9 +35,6 @@ import java.util.Map;
  * {@link IDGenerator} instance share the same generator ID.
  */
 public class SynchronizedUniqueIDGeneratorFactory {
-    final static Logger logger = LoggerFactory.getLogger(SynchronizedUniqueIDGeneratorFactory.class);
-    final static Map<String, IDGenerator> instances = new HashMap<>();
-
     /**
      * Get the synchronized ID generator instance.
      *
@@ -54,9 +48,9 @@ public class SynchronizedUniqueIDGeneratorFactory {
     public static synchronized IDGenerator generatorFor(Client etcd, Clock clock, Mode mode)
             throws IOException {
 
-        final int clusterId = ClusterID.get(etcd);
+        final List<Integer> clusterIds = ClusterID.get(etcd);
         SynchronizedGeneratorIdentity generatorIdentityHolder =
-                new SynchronizedGeneratorIdentity(etcd, clusterId, null, null);
+                new SynchronizedGeneratorIdentity(etcd, clusterIds, null, null);
 
         return generatorFor(generatorIdentityHolder, clock, mode);
     }

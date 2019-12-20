@@ -22,7 +22,11 @@ import io.etcd.jetcd.kv.GetResponse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ClusterID {
     final static ByteSequence CLUSTER_ID_KEY = ByteSequence.from("cluster-id", StandardCharsets.UTF_8);
@@ -35,7 +39,7 @@ public class ClusterID {
      * @return The cluster ID, if configured in the cluster.
      * @throws IOException Thrown when retrieving the ID fails.
      */
-    public static int get(Client etcd) throws IOException {
+    public static List<Integer> get(Client etcd) throws IOException {
         GetResponse get;
         try {
             get = etcd.getKVClient().get(CLUSTER_ID_KEY).get();
@@ -43,26 +47,38 @@ public class ClusterID {
             throw new IOException(e);
         }
 
-        Integer id = null;
+        List<Integer> ids = null;
 
         for (KeyValue kv : get.getKvs()) {
             if (kv.getKey().equals(CLUSTER_ID_KEY)) {
+                // There should be only one key returned.
                 String value = kv.getValue().toString(StandardCharsets.UTF_8);
-                id = Integer.parseInt(value);
+                try {
+                    ids = parseIntegers(value);
+                } catch (NumberFormatException e) {
+                    throw new IOException("Failed to parse cluster-id value `" + value + "`.", e);
+                }
                 break;
             }
         }
 
-        if (id == null) {
+        if (ids == null) {
             ByteSequence defaultValue = ByteSequence.from(String.valueOf(DEFAULT_CLUSTER_ID).getBytes());
             try {
                 etcd.getKVClient().put(CLUSTER_ID_KEY, defaultValue).get();
-                return DEFAULT_CLUSTER_ID;
+                return Collections.singletonList(DEFAULT_CLUSTER_ID);
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }
         } else {
-            return id;
+            return ids;
         }
+    }
+
+    static List<Integer> parseIntegers(String serialized) {
+        return Stream.of(serialized.split(","))
+                .map(String::trim)
+                .map(Integer::parseInt)
+                .collect(Collectors.toList());
     }
 }

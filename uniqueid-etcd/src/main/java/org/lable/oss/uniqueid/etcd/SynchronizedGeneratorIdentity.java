@@ -26,24 +26,25 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.function.Supplier;
 
 public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
     private static final Logger logger = LoggerFactory.getLogger(SynchronizedGeneratorIdentity.class);
 
     private final Client client;
-    private final int clusterId;
+    private final List<Integer> clusterIds;
     private final Supplier<Duration> claimDurationSupplier;
     private final Supplier<Duration> acquisitionTimeoutSupplier;
 
     ResourceClaim resourceClaim = null;
 
     public SynchronizedGeneratorIdentity(Client client,
-                                         int clusterId,
+                                         List<Integer> clusterIds,
                                          Supplier<Duration> claimDurationSupplier,
                                          Supplier<Duration> acquisitionTimeoutSupplier) {
         this.client = client;
-        this.clusterId = clusterId;
+        this.clusterIds = clusterIds;
         this.claimDurationSupplier = claimDurationSupplier;
         this.acquisitionTimeoutSupplier = acquisitionTimeoutSupplier == null
                 ? () -> null
@@ -72,10 +73,10 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
                 .endpoints(endpoints.split(","))
                 .namespace(ByteSequence.from(namespace, StandardCharsets.UTF_8))
                 .build();
-        int clusterId = ClusterID.get(client);
+        List<Integer> clusterIds = ClusterID.get(client);
 
         return new SynchronizedGeneratorIdentity(
-                client, clusterId, claimDurationSupplier, acquisitionTimeoutSupplier
+                client, clusterIds, claimDurationSupplier, acquisitionTimeoutSupplier
         );
     }
 
@@ -95,41 +96,51 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
                 .endpoints(endpoints.split(","))
                 .namespace(ByteSequence.from(namespace, StandardCharsets.UTF_8))
                 .build();
-        int clusterId = ClusterID.get(client);
+        List<Integer> clusterIds = ClusterID.get(client);
         Supplier<Duration> durationSupplier = () -> Duration.ofMillis(claimDuration);
 
-        return new SynchronizedGeneratorIdentity(client, clusterId, durationSupplier, null);
+        return new SynchronizedGeneratorIdentity(client, clusterIds, durationSupplier, null);
     }
 
     @Override
     public int getClusterId() throws GeneratorException {
-        return clusterId;
+        acquireResourceClaim();
+
+        try {
+            return resourceClaim.getClusterId();
+        } catch (IllegalStateException e) {
+            // Claim expired?
+            relinquishResourceClaim();
+            acquireResourceClaim();
+            return resourceClaim.getClusterId();
+        }
     }
 
     @Override
     public int getGeneratorId() throws GeneratorException {
-        if (resourceClaim == null) {
-            resourceClaim = acquireResourceClaim();
-        }
+        acquireResourceClaim();
 
         try {
-            return resourceClaim.get();
+            return resourceClaim.getGeneratorId();
         } catch (IllegalStateException e) {
             // Claim expired?
-            resourceClaim.close();
-            resourceClaim = acquireResourceClaim();
-            return resourceClaim.get();
+            relinquishResourceClaim();
+            acquireResourceClaim();
+            return resourceClaim.getGeneratorId();
         }
     }
 
 
-    public void relinquishGeneratorIdClaim() {
+    public synchronized void relinquishResourceClaim() {
+        if (resourceClaim == null) return;
         resourceClaim.close();
         resourceClaim = null;
     }
 
-    private ResourceClaim acquireResourceClaim() throws GeneratorException {
-        return acquireResourceClaim(0);
+    private synchronized void acquireResourceClaim() throws GeneratorException {
+        if (resourceClaim != null) return;
+
+        resourceClaim = acquireResourceClaim(0);
     }
 
     private ResourceClaim acquireResourceClaim(int retries) throws GeneratorException {
@@ -137,6 +148,7 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
             return ExpiringResourceClaim.claimExpiring(
                     client,
                     Blueprint.MAX_GENERATOR_ID + 1,
+                    clusterIds,
                     claimDurationSupplier == null ? null : claimDurationSupplier.get(),
                     acquisitionTimeoutSupplier.get()
             );
