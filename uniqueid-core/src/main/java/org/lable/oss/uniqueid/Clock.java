@@ -17,8 +17,8 @@ package org.lable.oss.uniqueid;
 
 /**
  * Abstraction for the clock implementation. This allows for use of this library in deterministic systems and tests.
- *
- * @implNote Clocks should at a minimum progress once every millisecond.
+ * <p>
+ * Implementation note: clocks should at a minimum progress once every millisecond.
  */
 @FunctionalInterface
 public interface Clock {
