@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2014 Lable (info@lable.nl)
+ * Copyright © 2014 Lable (info@lable.nl)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,7 +25,7 @@ import java.util.concurrent.ExecutionException;
 import static com.github.npathai.hamcrestopt.OptionalMatchers.hasValue;
 import static com.github.npathai.hamcrestopt.OptionalMatchers.isEmpty;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.lable.oss.uniqueid.etcd.EtcdHelper.*;
 
 public class EtcdHelperIT {

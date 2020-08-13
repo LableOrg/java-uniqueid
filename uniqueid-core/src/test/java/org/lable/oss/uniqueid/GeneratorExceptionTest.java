@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2014 Lable (info@lable.nl)
+ * Copyright © 2014 Lable (info@lable.nl)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,44 +16,55 @@
 package org.lable.oss.uniqueid;
 
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 
-import static org.hamcrest.CoreMatchers.isA;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertThrows;
 
 public class GeneratorExceptionTest {
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     @Test
-    public void constructionTest() throws GeneratorException {
-        thrown.expect(GeneratorException.class);
-        throw new GeneratorException();
+    public void constructionTest() {
+        assertThrows(GeneratorException.class, () -> {
+            throw new GeneratorException();
+        });
     }
 
     @Test
-    public void constructionWithMessageTest() throws GeneratorException {
-        thrown.expect(GeneratorException.class);
-        thrown.expectMessage("Hello!");
-        throw new GeneratorException("Hello!");
+    public void constructionWithMessageTest() {
+        assertThrows(
+                "Hello!",
+                GeneratorException.class,
+                () -> {
+                    throw new GeneratorException("Hello!");
+                }
+        );
+
     }
 
     @Test
-    public void constructionWithMessageAndThrowableTest() throws GeneratorException {
-        thrown.expect(GeneratorException.class);
-        thrown.expectMessage("Hello!");
-        thrown.expectCause(isA(IOException.class));
-        throw new GeneratorException("Hello!", new IOException("XXX"));
+    public void constructionWithMessageAndThrowableTest() {
+        GeneratorException e = assertThrows(
+                "Hello!",
+                GeneratorException.class,
+                () -> {
+                    throw new GeneratorException("Hello!", new IOException("XXX"));
+                }
+        );
+        assertThat(e.getCause(), is(instanceOf(IOException.class)));
     }
 
     @Test
     public void constructionWithThrowableTest() throws GeneratorException {
-        thrown.expect(GeneratorException.class);
-        thrown.expectCause(isA(IOException.class));
-        throw new GeneratorException(new IOException("XXX"));
+        GeneratorException e = assertThrows(
+                GeneratorException.class,
+                () -> {
+                    throw new GeneratorException(new IOException("XXX"));
+                }
+        );
+        assertThat(e.getCause(), is(instanceOf(IOException.class)));
     }
 }
