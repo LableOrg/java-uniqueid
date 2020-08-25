@@ -20,7 +20,7 @@
   <parent>
     <artifactId>uniqueid</artifactId>
     <groupId>org.lable.oss.uniqueid</groupId>
-    <version>3.2-SNAPSHOT</version>
+    <version>4.0-beta1</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
