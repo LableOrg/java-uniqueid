@@ -106,7 +106,7 @@ public class MultipleClusterIdsIT {
             clusterGeneratorIds.get(clusterId).add(generatorId);
         }
 
-        assertThat(clusterGeneratorIds.get(4).size(), is (256));
+        assertThat(clusterGeneratorIds.get(4).size(), is (2048));
         assertThat(clusterGeneratorIds.get(5).size(), is (1));
     }
 }

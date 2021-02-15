@@ -37,7 +37,7 @@ public class LocalUniqueIDGeneratorFactory {
      * Return the UniqueIDGenerator instance for this specific generator-ID, cluster-ID combination. If one was
      * already created, that is returned.
      *
-     * @param generatorId Generator ID to use (0 ≤ n ≤ 255).
+     * @param generatorId Generator ID to use (0 ≤ n ≤ 2047).
      * @param clusterId   Cluster ID to use (0 ≤ n ≤ 15).
      * @param clock       Clock implementation.
      * @param mode        Generator mode.
@@ -58,7 +58,7 @@ public class LocalUniqueIDGeneratorFactory {
      * Return the UniqueIDGenerator instance for this specific generator-ID, cluster-ID combination. If one was
      * already created, that is returned.
      *
-     * @param generatorId Generator ID to use (0 ≤ n ≤ 255).
+     * @param generatorId Generator ID to use (0 ≤ n ≤ 2047).
      * @param clusterId   Cluster ID to use (0 ≤ n ≤ 15).
      * @param mode        Generator mode.
      * @return A thread-safe UniqueIDGenerator instance.
