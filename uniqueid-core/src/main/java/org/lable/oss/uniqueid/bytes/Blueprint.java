@@ -34,7 +34,7 @@ public class Blueprint {
     /**
      * Upper bound (inclusive) of the generator-ID.
      */
-    public final static int MAX_GENERATOR_ID = 255;
+    public final static int MAX_GENERATOR_ID = 2047;
 
     /**
      * Upper bound (inclusive) of the cluster-ID.

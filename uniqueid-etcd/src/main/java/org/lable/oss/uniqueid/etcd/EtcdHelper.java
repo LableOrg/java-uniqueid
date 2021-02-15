@@ -49,6 +49,10 @@ public class EtcdHelper {
         etcd.getKVClient().put(asByteSequence(key), asByteSequence(value)).get();
     }
 
+    public static void put(Client etcd, String key) throws ExecutionException, InterruptedException {
+        etcd.getKVClient().put(asByteSequence(key),ByteSequence.EMPTY).get();
+    }
+
     public static void delete(Client etcd, String key) throws ExecutionException, InterruptedException {
         etcd.getKVClient().delete(asByteSequence(key)).get();
     }

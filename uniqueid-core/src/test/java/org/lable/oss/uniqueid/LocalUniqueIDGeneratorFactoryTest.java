@@ -22,7 +22,7 @@ public class LocalUniqueIDGeneratorFactoryTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void outOfBoundsGeneratorIDTest() {
-        LocalUniqueIDGeneratorFactory.generatorFor(256, 0, Mode.SPREAD);
+        LocalUniqueIDGeneratorFactory.generatorFor(2048, 0, Mode.SPREAD);
     }
 
     @Test(expected = IllegalArgumentException.class)

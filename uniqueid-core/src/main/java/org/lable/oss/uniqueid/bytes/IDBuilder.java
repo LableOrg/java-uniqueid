@@ -24,7 +24,7 @@ import static org.lable.oss.uniqueid.ParameterUtil.assertNotNullEightBytes;
  * <p>
  * The eight byte ID is composed as follows:
  *
- * <pre>TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTSSSSSS ...MGGGG GGGGCCCC</pre>
+ * <pre>TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT TTSSSSSS GGGMGGGG GGGGCCCC</pre>
  *
  * <ul>
  * <li><code>T</code>: Timestamp (in milliseconds, bit order depends on mode)
@@ -67,8 +67,9 @@ public class IDBuilder {
         tsBytes[5] = (byte) or;
 
         // Last two bytes. The mode flag, generator ID, and cluster ID.
-        // [6] ...MGGGG  [7] GGGGCCCC
-        int flagGeneratorCluster = blueprint.getGeneratorId() << 4;
+        // [6] GGGMGGGG  [7] GGGGCCCC
+        int flagGeneratorCluster = (blueprint.getGeneratorId() << 5) & 0xE000;
+        flagGeneratorCluster += (blueprint.getGeneratorId() & 0x00FF) << 4;
         flagGeneratorCluster += blueprint.getClusterId();
         flagGeneratorCluster += blueprint.getMode().getModeMask() << 12;
 
@@ -160,8 +161,8 @@ public class IDBuilder {
     }
 
     private static int parseGeneratorIdNoChecks(byte[] id) {
-        // [6] ....GGGG  [7] GGGG....
-        return (id[7] >> 4 & 0x0F) | (id[6] << 4 & 0xF0);
+        // [6] GGG.GGGG  [7] GGGG....
+        return (id[7] >> 4 & 0x0F) | (id[6] << 3 & 0x0700) | (id[6] << 4 & 0xF0);
     }
 
     private static int parseClusterIdNoChecks(byte[] id) {

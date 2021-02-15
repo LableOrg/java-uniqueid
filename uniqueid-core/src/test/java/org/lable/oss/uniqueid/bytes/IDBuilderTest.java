@@ -17,6 +17,10 @@ package org.lable.oss.uniqueid.bytes;
 
 import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
+import org.lable.oss.uniqueid.ByteArray;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -41,8 +45,7 @@ public class IDBuilderTest {
                 Blueprint.MAX_CLUSTER_ID,
                 Mode.SPREAD
         ));
-        // The "0f" for the 7th byte is due to the reserved bits that are always zero for the SPREAD mode.
-        final String expected = "ffffffffffff0fff";
+        final String expected = "ffffffffffffefff";
 
         // Baseline check, if all ID parts are all ones so is the result (except for the reserved bytes).
         assertThat(Hex.encodeHexString(result), is(expected));
@@ -233,5 +236,32 @@ public class IDBuilderTest {
     @Test(expected = IllegalArgumentException.class)
     public void parseIllegalArgumentNull() {
         IDBuilder.parse(null);
+    }
+
+    @Test
+    public void fullGeneratorSpace() {
+        // Verify that bitwise operations in IDBuilder work.
+        Set<ByteArray> results = new HashSet<>();
+        for (int generatorId = 0; generatorId <= Blueprint.MAX_GENERATOR_ID; generatorId++) {
+            byte[] result = IDBuilder.build(new Blueprint(
+                    Blueprint.MAX_TIMESTAMP,
+                    Blueprint.MAX_SEQUENCE_COUNTER,
+                    generatorId,
+                    Blueprint.MAX_CLUSTER_ID,
+                    Mode.SPREAD
+            ));
+            results.add(new ByteArray(result));
+
+            result = IDBuilder.build(new Blueprint(
+                    Blueprint.MAX_TIMESTAMP,
+                    Blueprint.MAX_SEQUENCE_COUNTER,
+                    generatorId,
+                    Blueprint.MAX_CLUSTER_ID,
+                    Mode.TIME_SEQUENTIAL
+            ));
+            results.add(new ByteArray(result));
+        }
+
+        assertThat(results.size(), is(2 *(Blueprint.MAX_GENERATOR_ID + 1)));
     }
 }
