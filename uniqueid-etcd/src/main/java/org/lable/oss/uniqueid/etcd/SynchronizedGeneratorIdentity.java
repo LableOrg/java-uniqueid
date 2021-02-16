@@ -154,7 +154,7 @@ public class SynchronizedGeneratorIdentity implements GeneratorIdentityHolder {
             );
         } catch (IOException e) {
             logger.warn(
-                    "Connection to ZooKeeper quorum failed, retrying resource claim acquisition, attempt {}.",
+                    "Connection to Etcd failed, retrying resource claim acquisition, attempt {}.",
                     retries + 1
             );
             if (retries < 3) {
