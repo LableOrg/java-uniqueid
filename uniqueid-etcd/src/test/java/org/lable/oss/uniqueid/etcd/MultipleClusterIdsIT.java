@@ -18,10 +18,7 @@ package org.lable.oss.uniqueid.etcd;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.ExpectedException;
 import org.lable.oss.uniqueid.ByteArray;
 import org.lable.oss.uniqueid.GeneratorException;
@@ -65,6 +62,9 @@ public class MultipleClusterIdsIT {
     }
 
     @Test
+    @Ignore
+    // This test works, but not on every computer and not always due to the high number of threads.
+    // Run it manually if needed.
     public void doubleConcurrentTest() throws Exception {
         final int threadCount = Blueprint.MAX_GENERATOR_ID + 2;
 

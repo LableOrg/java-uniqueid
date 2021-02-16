@@ -347,14 +347,4 @@ public class ResourceClaim implements Closeable {
         HAS_CLAIM,
         CLAIM_RELINQUISHED
     }
-
-    static class ResourcePair {
-        int clusterId;
-        int generatorId;
-
-        public ResourcePair(Integer clusterId, int generatorId) {
-            this.clusterId = clusterId;
-            this.generatorId = generatorId;
-        }
-    }
 }
