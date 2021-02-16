@@ -45,6 +45,14 @@ public class EtcdHelper {
         }
     }
 
+    public static Optional<String> get(Client etcd, String key) throws ExecutionException, InterruptedException {
+        GetResponse getResponse = etcd.getKVClient().get(asByteSequence(key)).get();
+
+        if (getResponse.getCount() == 0) return Optional.empty();
+
+        return Optional.of(getResponse.getKvs().get(0).getValue().toString(StandardCharsets.UTF_8));
+    }
+
     public static void put(Client etcd, String key, int value) throws ExecutionException, InterruptedException {
         etcd.getKVClient().put(asByteSequence(key), asByteSequence(value)).get();
     }
