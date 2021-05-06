@@ -15,7 +15,10 @@
  */
 package org.lable.oss.uniqueid.etcd;
 
-import io.etcd.jetcd.*;
+import io.etcd.jetcd.ByteSequence;
+import io.etcd.jetcd.Client;
+import io.etcd.jetcd.KeyValue;
+import io.etcd.jetcd.Watch;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.kv.TxnResponse;
 import io.etcd.jetcd.lease.LeaseGrantResponse;
@@ -55,30 +58,34 @@ public class RegistryBasedResourceClaim {
 
     final int poolSize;
 
-    RegistryBasedResourceClaim(Supplier<Client> connectToEtcd, int maxGeneratorCount, String registryEntry)
+    RegistryBasedResourceClaim(Supplier<Client> connectToEtcd,
+                               int maxGeneratorCount,
+                               String registryEntry,
+                               Duration acquisitionTimeout,
+                               boolean waitWhenNoResourcesAvailable)
             throws IOException {
         this.registryEntry = registryEntry;
         this.connectToEtcd = connectToEtcd;
 
-        logger.debug("Acquiring resource-claim…");
+        logger.info("Acquiring resource-claim…");
 
         Client etcd = connectToEtcd.get();
 
         List<Integer> clusterIds = ClusterID.get(etcd);
 
-        Duration timeout = Duration.ofMinutes(5);
+        Duration timeout = acquisitionTimeout == null
+                ? Duration.ofMinutes(5)
+                : acquisitionTimeout;
         Instant giveUpAfter = Instant.now().plus(timeout);
 
         this.poolSize = maxGeneratorCount;
 
+        ResourcePair resourcePair = null;
         try {
-            LeaseGrantResponse lease = etcd.getLeaseClient().grant(5).get();
+            logger.debug("Acquiring lock, timeout is set to {}.", timeout);
+            // Have the lease TTL just a bit after our timeout.
+            LeaseGrantResponse lease = etcd.getLeaseClient().grant(timeout.plusSeconds(5).getSeconds()).get();
             long leaseId = lease.getID();
-
-            // Keep the lease alive until we are done.
-            CloseableClient leaseKeepAlive = EtcdHelper.keepLeaseAlive(etcd, leaseId, null);
-
-            // Release the lease when closed.
 
             // Acquire the lock. This makes sure we are the only process claiming a resource.
             LockResponse lock;
@@ -90,24 +97,37 @@ public class RegistryBasedResourceClaim {
                 throw new IOException("Process timed out.");
             }
 
+            // Keep the lease alive for another period in order to safely finish claiming the resource.
+            etcd.getLeaseClient().keepAliveOnce(leaseId).get();
+
             if (logger.isDebugEnabled()) {
                 logger.debug("Acquired lock: {}.", lock.getKey().toString(StandardCharsets.UTF_8));
             }
 
-            ResourcePair resourcePair = claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter);
+            resourcePair = claimResource(
+                    etcd, maxGeneratorCount, clusterIds, giveUpAfter, waitWhenNoResourcesAvailable
+            );
             this.clusterId = resourcePair.clusterId;
             this.generatorId = resourcePair.generatorId;
 
-            // Release the lock. If this line is not reached due to exceptions raised, the lock will automatically
-            // be removed when the lease holding it expires.
+            // Explicitly release the lock. If this line is not reached due to exceptions raised, the lock will
+            // automatically be removed when the lease holding it expires.
             etcd.getLockClient().unlock(lock.getKey()).get();
+            if (logger.isDebugEnabled()) {
+                logger.debug("Released lock: {}.", lock.getKey().toString(StandardCharsets.UTF_8));
+            }
 
-            leaseKeepAlive.close();
+            // Revoke the lease instead of letting it time out.
+            etcd.getLeaseClient().revoke(leaseId).get();
         } catch (ExecutionException e) {
-            close();
+            if (resourcePair != null) {
+                close();
+            }
             throw new IOException(e);
         } catch (InterruptedException e) {
-            close();
+            if (resourcePair != null) {
+                close();
+            }
             Thread.currentThread().interrupt();
             throw new IOException(e);
         }
@@ -115,22 +135,42 @@ public class RegistryBasedResourceClaim {
         logger.debug("Resource-claim acquired ({}/{}).", clusterId, generatorId);
     }
 
+    /**
+     * Claim a resource.
+     *
+     * @param connectToEtcd                Provide a connection to Etcd.
+     * @param maxGeneratorCount            Maximum number of generators possible.
+     * @param registryEntry                Metadata stored under the Etcd key.
+     * @param acquisitionTimeout           Abort attempt to claim a resource after this duration.
+     * @param waitWhenNoResourcesAvailable Wait for a resource to become available when all resources are claimed.
+     * @return The resource claim, if successful.
+     * @throws IOException Thrown when the claim could not be acquired.
+     */
     public static RegistryBasedResourceClaim claim(Supplier<Client> connectToEtcd,
                                                    int maxGeneratorCount,
-                                                   String registryEntry) throws IOException {
-        return new RegistryBasedResourceClaim(connectToEtcd, maxGeneratorCount, registryEntry);
+                                                   String registryEntry,
+                                                   Duration acquisitionTimeout,
+                                                   boolean waitWhenNoResourcesAvailable) throws IOException {
+        return new RegistryBasedResourceClaim(
+                connectToEtcd, maxGeneratorCount, registryEntry, acquisitionTimeout, waitWhenNoResourcesAvailable
+        );
     }
 
     /**
      * Try to claim an available resource from the resource pool.
      *
-     * @param etcd              Etcd connection.
-     * @param maxGeneratorCount Maximum number of generators possible.
-     * @param clusterIds        Cluster Ids available to use.
-     * @param giveUpAfter       Give up after this instant in time.
+     * @param etcd                         Etcd connection.
+     * @param maxGeneratorCount            Maximum number of generators possible.
+     * @param clusterIds                   Cluster Ids available to use.
+     * @param giveUpAfter                  Give up after this instant in time.
+     * @param waitWhenNoResourcesAvailable Wait for a resource to become available when all resources are claimed.
      * @return The claimed resource.
      */
-    ResourcePair claimResource(Client etcd, int maxGeneratorCount, List<Integer> clusterIds, Instant giveUpAfter)
+    ResourcePair claimResource(Client etcd,
+                               int maxGeneratorCount,
+                               List<Integer> clusterIds,
+                               Instant giveUpAfter,
+                               boolean waitWhenNoResourcesAvailable)
             throws InterruptedException, IOException, ExecutionException {
 
         logger.debug("Trying to claim a resource.");
@@ -148,7 +188,12 @@ public class RegistryBasedResourceClaim {
                 .collect(Collectors.toList());
 
         if (claimedResources.size() >= registrySize) {
-            logger.debug("No resources available at the moment (registry size: {}), waiting.", registrySize);
+            if (!waitWhenNoResourcesAvailable) {
+                throw new IOException(
+                        "No resources available. Giving up as requested. Registry size: " + registrySize + "."
+                );
+            }
+            logger.warn("No resources available at the moment (registry size: {}), waiting.", registrySize);
             // No resources available. Wait for a resource to become available.
             final CountDownLatch latch = new CountDownLatch(1);
             Watch.Watcher watcher = etcd.getWatchClient().watch(
@@ -158,7 +203,7 @@ public class RegistryBasedResourceClaim {
             );
             awaitLatchUnlessItTakesTooLong(latch, giveUpAfter);
             watcher.close();
-            return claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter);
+            return claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter, true);
         }
 
         // Try to claim an available resource.
@@ -185,13 +230,13 @@ public class RegistryBasedResourceClaim {
                         continue;
                     }
 
-                    logger.debug("Successfully claimed resource {}.", resourcePathString);
+                    logger.info("Successfully claimed resource {}.", resourcePathString);
                     return new ResourcePair(clusterId, generatorId);
                 }
             }
         }
 
-        return claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter);
+        return claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter, waitWhenNoResourcesAvailable);
     }
 
     static String resourceKey(Integer clusterId, int generatorId) {
