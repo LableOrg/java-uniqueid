@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 /**
  * Holder for a claimed cluster-id and generator-id that once claimed remains claimed without an active connection to
@@ -36,11 +37,19 @@ public class RegistryBasedGeneratorIdentity implements GeneratorIdentityHolder {
 
     private final String endpoints;
     private final String namespace;
+    private final Duration acquisitionTimeout;
+    private final boolean waitWhenNoResourcesAvailable;
     private final RegistryBasedResourceClaim resourceClaim;
 
-    public RegistryBasedGeneratorIdentity(String endpoints, String namespace, String registryEntry) {
+    public RegistryBasedGeneratorIdentity(String endpoints,
+                                          String namespace,
+                                          String registryEntry,
+                                          Duration acquisitionTimeout,
+                                          boolean waitWhenNoResourcesAvailable) {
         this.endpoints = endpoints;
         this.namespace = namespace;
+        this.acquisitionTimeout = acquisitionTimeout;
+        this.waitWhenNoResourcesAvailable = waitWhenNoResourcesAvailable;
 
         try {
             resourceClaim = acquireResourceClaim(registryEntry, 0);
@@ -52,7 +61,18 @@ public class RegistryBasedGeneratorIdentity implements GeneratorIdentityHolder {
     public static RegistryBasedGeneratorIdentity basedOn(String endpoints, String namespace, String registryEntry)
             throws IOException {
         return new RegistryBasedGeneratorIdentity(
-                endpoints, namespace, registryEntry
+                endpoints, namespace, registryEntry, Duration.ofMinutes(5), true
+        );
+    }
+
+    public static RegistryBasedGeneratorIdentity basedOn(String endpoints,
+                                                         String namespace,
+                                                         String registryEntry,
+                                                         Duration acquisitionTimeout,
+                                                         boolean waitWhenNoResourcesAvailable)
+            throws IOException {
+        return new RegistryBasedGeneratorIdentity(
+                endpoints, namespace, registryEntry, acquisitionTimeout, waitWhenNoResourcesAvailable
         );
     }
 
@@ -76,16 +96,19 @@ public class RegistryBasedGeneratorIdentity implements GeneratorIdentityHolder {
             return RegistryBasedResourceClaim.claim(
                     this::getEtcdConnection,
                     Blueprint.MAX_GENERATOR_ID + 1,
-                    registryEntry
+                    registryEntry,
+                    acquisitionTimeout,
+                    waitWhenNoResourcesAvailable
             );
         } catch (IOException e) {
-            logger.warn(
-                    "Connection to Etcd failed, retrying resource claim acquisition, attempt {}.",
-                    retries + 1
-            );
             if (retries < 3) {
+                logger.warn(
+                        "Connection to Etcd failed, retrying claim acquisition, attempt " + (retries + 1) + ".",
+                        e
+                );
                 return acquireResourceClaim(registryEntry, retries + 1);
             } else {
+                logger.error("Failed to acquire resource claim after attempt " + (retries + 1) + ".", e);
                 throw new GeneratorException(e);
             }
         }
