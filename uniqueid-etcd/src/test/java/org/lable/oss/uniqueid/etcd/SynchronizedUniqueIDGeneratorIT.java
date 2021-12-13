@@ -17,7 +17,6 @@ package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
 import org.apache.commons.codec.binary.Hex;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -45,7 +44,7 @@ import static org.lable.oss.uniqueid.etcd.SynchronizedUniqueIDGeneratorFactory.g
 
 public class SynchronizedUniqueIDGeneratorIT {
     @ClassRule
-    public static final EtcdClusterResource etcd = new EtcdClusterResource("test-etcd", 1);
+    public static final EtcdTestCluster etcd = new EtcdTestCluster("test-etcd", 1);
 
     final static int CLUSTER_ID = 4;
 

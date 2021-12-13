@@ -17,7 +17,6 @@ package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -26,12 +25,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 
 public class ClusterIDIT {
     @Rule
-    public final EtcdClusterResource etcd = new EtcdClusterResource("test-etcd", 1);
+    public final EtcdTestCluster etcd = new EtcdTestCluster("test-etcd", 1);
 
     @Test
     public void defaultTest() throws IOException {

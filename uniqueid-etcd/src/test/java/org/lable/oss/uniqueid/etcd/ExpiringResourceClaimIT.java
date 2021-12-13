@@ -17,7 +17,6 @@ package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -31,17 +30,17 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.npathai.hamcrestopt.OptionalMatchers.isEmpty;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.core.CombinableMatcher.both;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.lable.oss.uniqueid.etcd.ResourceClaim.POOL_PREFIX;
 import static org.lable.oss.uniqueid.etcd.ResourceClaim.resourceKey;
 
 public class ExpiringResourceClaimIT {
     @Rule
-    public final EtcdClusterResource etcd = new EtcdClusterResource("test-etcd", 1);
+    public final EtcdTestCluster etcd = new EtcdTestCluster("test-etcd", 1);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();

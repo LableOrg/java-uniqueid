@@ -15,7 +15,10 @@
  */
 package org.lable.oss.uniqueid.etcd;
 
-import io.etcd.jetcd.*;
+import io.etcd.jetcd.ByteSequence;
+import io.etcd.jetcd.Client;
+import io.etcd.jetcd.KeyValue;
+import io.etcd.jetcd.Watch;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.kv.TxnResponse;
 import io.etcd.jetcd.lease.LeaseGrantResponse;
@@ -26,6 +29,7 @@ import io.etcd.jetcd.op.Op;
 import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.PutOption;
 import io.etcd.jetcd.options.WatchOption;
+import io.etcd.jetcd.support.CloseableClient;
 import io.etcd.jetcd.watch.WatchEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

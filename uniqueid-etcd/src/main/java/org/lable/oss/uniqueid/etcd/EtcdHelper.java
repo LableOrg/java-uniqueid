@@ -17,9 +17,9 @@ package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.CloseableClient;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.lease.LeaseKeepAliveResponse;
+import io.etcd.jetcd.support.CloseableClient;
 import io.grpc.stub.StreamObserver;
 
 import java.nio.charset.StandardCharsets;

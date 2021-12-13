@@ -17,8 +17,6 @@ package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,11 +40,10 @@ import static com.github.npathai.hamcrestopt.OptionalMatchers.isEmpty;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.fail;
-import static org.lable.oss.uniqueid.etcd.SynchronizedUniqueIDGeneratorFactory.generatorFor;
 
 public class RegistryBasedGeneratorIdentityTest {
     @Rule
-    public final EtcdClusterResource etcd = new EtcdClusterResource("test-etcd", 1);
+    public final EtcdTestCluster etcd = new EtcdTestCluster("test-etcd", 1);
 
     Client client;
 

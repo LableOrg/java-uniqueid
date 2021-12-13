@@ -17,8 +17,7 @@ package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.CloseableClient;
-import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
+import io.etcd.jetcd.support.CloseableClient;
 import org.junit.*;
 import org.junit.rules.ExpectedException;
 
@@ -31,15 +30,15 @@ import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.core.CombinableMatcher.both;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.lable.oss.uniqueid.etcd.ResourceClaim.LOCK_NAME;
 
 public class AcquisitionTimeoutIT {
     @ClassRule
-    public static final EtcdClusterResource etcd = new EtcdClusterResource("test-etcd", 1);
+    public static final EtcdTestCluster etcd = new EtcdTestCluster("test-etcd", 1);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();

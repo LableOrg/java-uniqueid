@@ -16,7 +16,6 @@
 package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -24,13 +23,12 @@ import java.util.concurrent.ExecutionException;
 
 import static com.github.npathai.hamcrestopt.OptionalMatchers.hasValue;
 import static com.github.npathai.hamcrestopt.OptionalMatchers.isEmpty;
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.lable.oss.uniqueid.etcd.EtcdHelper.*;
 
 public class EtcdHelperIT {
     @Rule
-    public final EtcdClusterResource etcd = new EtcdClusterResource("test-etcd", 1);
+    public final EtcdTestCluster etcd = new EtcdTestCluster("test-etcd", 1);
 
     @Test
     public void test() throws ExecutionException, InterruptedException {

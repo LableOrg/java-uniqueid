@@ -17,32 +17,24 @@ package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
-import org.apache.commons.codec.binary.Hex;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
-import org.lable.oss.uniqueid.ByteArray;
-import org.lable.oss.uniqueid.GeneratorException;
 import org.lable.oss.uniqueid.IDGenerator;
 import org.lable.oss.uniqueid.bytes.Blueprint;
 import org.lable.oss.uniqueid.bytes.IDBuilder;
 import org.lable.oss.uniqueid.bytes.Mode;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 import static org.lable.oss.uniqueid.etcd.SynchronizedUniqueIDGeneratorFactory.generatorFor;
 
 public class HighGeneratorCountIT {
     @ClassRule
-    public static final EtcdClusterResource etcd = new EtcdClusterResource("test-etcd", 1);
+    public static final EtcdTestCluster etcd = new EtcdTestCluster("test-etcd", 1);
 
     final static int CLUSTER_ID_A = 4;
     final static int CLUSTER_ID_B = 5;

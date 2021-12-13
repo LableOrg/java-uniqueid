@@ -17,7 +17,6 @@ package org.lable.oss.uniqueid.etcd;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
-import io.etcd.jetcd.launcher.junit4.EtcdClusterResource;
 import org.junit.*;
 import org.junit.rules.ExpectedException;
 import org.lable.oss.uniqueid.ByteArray;
@@ -29,8 +28,13 @@ import org.lable.oss.uniqueid.bytes.Mode;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -39,7 +43,7 @@ import static org.lable.oss.uniqueid.etcd.SynchronizedUniqueIDGeneratorFactory.g
 
 public class MultipleClusterIdsIT {
     @ClassRule
-    public static final EtcdClusterResource etcd = new EtcdClusterResource("test-etcd", 1);
+    public static final EtcdTestCluster etcd = new EtcdTestCluster("test-etcd", 1);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
