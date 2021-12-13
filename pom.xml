@@ -41,7 +41,7 @@
   </modules>
 
   <properties>
-    <dynamicconfig.version>4.0-beta2</dynamicconfig.version>
+    <dynamicconfig.version>4.0</dynamicconfig.version>
     <jetcd-version>0.6.1</jetcd-version>
     <slf4j.version>1.7.32</slf4j.version>
     <javax.annotation.version>1.3.2</javax.annotation.version>
