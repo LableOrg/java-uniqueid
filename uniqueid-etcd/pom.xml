@@ -84,6 +84,21 @@
             <configuration>
               <shadedArtifactAttached>true</shadedArtifactAttached>
               <shadedClassifierName>shaded</shadedClassifierName>
+              <filters>
+                <filter>
+                  <!-- Jackson includes Java 17 and 21 classes for DoubleParser, which seem to get used automagically
+                       with newer JDK's. They break shading upstream (by us) though, by including class files beyond
+                       Java 11.
+
+                       These will have to be turned on again when migrating to Java 17 and beyond (although leaving them
+                       out probably won't break Jackson). -->
+                  <artifact>com.fasterxml.jackson.core:jackson-core</artifact>
+                  <excludes>
+                    <exclude>META-INF/versions/17/**</exclude>
+                    <exclude>META-INF/versions/19/**</exclude>
+                  </excludes>
+                </filter>
+              </filters>
               <relocations>
                 <relocation>
                   <pattern>com.google.</pattern>
