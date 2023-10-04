@@ -100,7 +100,7 @@ public class EtcdHelper {
     }
 
     @FunctionalInterface
-    interface OnRelease {
+    public interface OnRelease {
         void cleanUp();
     }
 }

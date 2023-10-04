@@ -27,6 +27,7 @@ import io.etcd.jetcd.op.Cmp;
 import io.etcd.jetcd.op.CmpTarget;
 import io.etcd.jetcd.op.Op;
 import io.etcd.jetcd.options.GetOption;
+import io.etcd.jetcd.options.OptionsUtil;
 import io.etcd.jetcd.options.PutOption;
 import io.etcd.jetcd.options.WatchOption;
 import org.slf4j.Logger;
@@ -177,9 +178,9 @@ public class RegistryBasedResourceClaim {
 
         int registrySize = maxGeneratorCount * clusterIds.size();
 
-        GetOption getOptions = GetOption.newBuilder()
+        GetOption getOptions = GetOption.builder()
                 .withKeysOnly(true)
-                .withPrefix(REGISTRY_KEY)
+                .withRange(OptionsUtil.prefixEndOf(REGISTRY_KEY))
                 .build();
         GetResponse get = etcd.getKVClient().get(REGISTRY_KEY, getOptions).get();
 
@@ -198,7 +199,9 @@ public class RegistryBasedResourceClaim {
             final CountDownLatch latch = new CountDownLatch(1);
             Watch.Watcher watcher = etcd.getWatchClient().watch(
                     REGISTRY_KEY,
-                    WatchOption.newBuilder().withPrefix(REGISTRY_KEY).build(),
+                    WatchOption.builder()
+                            .withRange(OptionsUtil.prefixEndOf(REGISTRY_KEY))
+                            .build(),
                     watchResponse -> latch.countDown()
             );
             awaitLatchUnlessItTakesTooLong(latch, giveUpAfter);
@@ -221,7 +224,7 @@ public class RegistryBasedResourceClaim {
                                     Op.put(
                                             resourcePath,
                                             ByteSequence.from(registryEntry, StandardCharsets.UTF_8),
-                                            PutOption.newBuilder().build()
+                                            PutOption.builder().build()
                                     )
                             ).commit().get();
 

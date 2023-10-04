@@ -27,6 +27,7 @@ import io.etcd.jetcd.op.Cmp;
 import io.etcd.jetcd.op.CmpTarget;
 import io.etcd.jetcd.op.Op;
 import io.etcd.jetcd.options.GetOption;
+import io.etcd.jetcd.options.OptionsUtil;
 import io.etcd.jetcd.options.PutOption;
 import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.support.CloseableClient;
@@ -242,9 +243,9 @@ public class ResourceClaim implements Closeable {
 
         int poolSize = maxGeneratorCount * clusterIds.size();
 
-        GetOption getOptions = GetOption.newBuilder()
+        GetOption getOptions = GetOption.builder()
                 .withKeysOnly(true)
-                .withPrefix(POOL_KEY)
+                .withRange(OptionsUtil.prefixEndOf(POOL_KEY))
                 .build();
         GetResponse get = etcd.getKVClient().get(POOL_KEY, getOptions).get();
 
@@ -258,7 +259,10 @@ public class ResourceClaim implements Closeable {
             final CountDownLatch latch = new CountDownLatch(1);
             Watch.Watcher watcher = etcd.getWatchClient().watch(
                     POOL_KEY,
-                    WatchOption.newBuilder().withPrefix(POOL_KEY).build(),
+                    WatchOption
+                            .builder()
+                            .withRange(OptionsUtil.prefixEndOf(POOL_KEY))
+                            .build(),
                     watchResponse -> latch.countDown()
             );
             awaitLatchUnlessItTakesTooLong(latch, giveUpAfter);
@@ -281,7 +285,7 @@ public class ResourceClaim implements Closeable {
                                     Op.put(
                                             resourcePath,
                                             ByteSequence.EMPTY,
-                                            PutOption.newBuilder().withLeaseId(leaseId).build()
+                                            PutOption.builder().withLeaseId(leaseId).build()
                                     )
                             ).commit().get();
 
