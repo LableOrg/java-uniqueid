@@ -45,7 +45,7 @@
     <java.language.level>1.8</java.language.level>
 
     <dynamicconfig.version>2.9-beta4</dynamicconfig.version>
-    <zookeeper.version>3.4.6</zookeeper.version>
+    <zookeeper.version>3.7.2</zookeeper.version>
     <jetcd-version>0.4.1</jetcd-version>
     <slf4j.version>1.7.21</slf4j.version>
 
