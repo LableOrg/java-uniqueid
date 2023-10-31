@@ -15,10 +15,7 @@
  */
 package org.lable.oss.uniqueid.etcd;
 
-import io.etcd.jetcd.ByteSequence;
-import io.etcd.jetcd.Client;
-import io.etcd.jetcd.KeyValue;
-import io.etcd.jetcd.Watch;
+import io.etcd.jetcd.*;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.kv.TxnResponse;
 import io.etcd.jetcd.lease.LeaseGrantResponse;
@@ -58,6 +55,7 @@ public class RegistryBasedResourceClaim {
     final int generatorId;
 
     final int poolSize;
+    final KV kvClient;
 
     RegistryBasedResourceClaim(Supplier<Client> connectToEtcd,
                                int maxGeneratorCount,
@@ -71,6 +69,12 @@ public class RegistryBasedResourceClaim {
         logger.info("Acquiring resource-claim…");
 
         Client etcd = connectToEtcd.get();
+
+        // Keep the KV client around, because if we try to instantiate it during shutdown of a Java application when
+        // the resource is likely to be released, it will fail because further down the stack an attempt is made to
+        // register a shutdown handler, which fails because the application is already shutting down. So we instantiate
+        // this here and keep it.
+        kvClient = etcd.getKVClient();
 
         List<Integer> clusterIds = ClusterID.get(etcd);
 
@@ -268,12 +272,11 @@ public class RegistryBasedResourceClaim {
     private void relinquishResource() {
         logger.debug("Relinquishing claimed registry resource {}:{}.", clusterId, generatorId);
 
-        Client etcd = connectToEtcd.get();
         String resourcePathString = resourceKey(clusterId, generatorId);
         ByteSequence resourcePath = ByteSequence.from(resourcePathString, StandardCharsets.UTF_8);
 
         try {
-            etcd.getKVClient().delete(resourcePath).get();
+            kvClient.delete(resourcePath).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
