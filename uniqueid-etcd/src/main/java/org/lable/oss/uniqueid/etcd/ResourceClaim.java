@@ -15,10 +15,7 @@
  */
 package org.lable.oss.uniqueid.etcd;
 
-import io.etcd.jetcd.ByteSequence;
-import io.etcd.jetcd.Client;
-import io.etcd.jetcd.KeyValue;
-import io.etcd.jetcd.Watch;
+import io.etcd.jetcd.*;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.kv.TxnResponse;
 import io.etcd.jetcd.lease.LeaseGrantResponse;
@@ -66,6 +63,7 @@ public class ResourceClaim implements Closeable {
 
     final int poolSize;
     final Client etcd;
+    final Lease leaseClient;
 
     long leaseId;
 
@@ -85,6 +83,15 @@ public class ResourceClaim implements Closeable {
 
         this.poolSize = maxGeneratorCount;
         this.etcd = etcd;
+
+        // Keep the lease client around, because if we try to instantiate it during shutdown of a Java application when
+        // the resource is likely to be released, it will fail because further down the stack an attempt is made to
+        // register a shutdown handler, which fails because the application is already shutting down. So we instantiate
+        // this here and keep it.
+        this.leaseClient = etcd.getLeaseClient();
+
+        KV kvClient = etcd.getKVClient();
+
         try {
             LeaseGrantResponse lease = etcd.getLeaseClient().grant(5).get();
             leaseId = lease.getID();
@@ -110,7 +117,7 @@ public class ResourceClaim implements Closeable {
                 logger.debug("Acquired lock: {}.", lock.getKey().toString(StandardCharsets.UTF_8));
             }
 
-            ResourcePair resourcePair = claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter);
+            ResourcePair resourcePair = claimResource(kvClient, maxGeneratorCount, clusterIds, giveUpAfter);
             this.clusterId = resourcePair.clusterId;
             this.generatorId = resourcePair.generatorId;
 
@@ -230,13 +237,13 @@ public class ResourceClaim implements Closeable {
     /**
      * Try to claim an available resource from the resource pool.
      *
-     * @param etcd              Etcd connection.
+     * @param kvClient          Etcd KV client.
      * @param maxGeneratorCount Maximum number of generators possible.
      * @param clusterIds        Cluster Ids available to use.
      * @param giveUpAfter       Give up after this instant in time.
      * @return The claimed resource.
      */
-    ResourcePair claimResource(Client etcd, int maxGeneratorCount, List<Integer> clusterIds, Instant giveUpAfter)
+    ResourcePair claimResource(KV kvClient, int maxGeneratorCount, List<Integer> clusterIds, Instant giveUpAfter)
             throws InterruptedException, IOException, ExecutionException {
 
         logger.debug("Trying to claim a resource.");
@@ -247,7 +254,7 @@ public class ResourceClaim implements Closeable {
                 .withKeysOnly(true)
                 .withRange(OptionsUtil.prefixEndOf(POOL_KEY))
                 .build();
-        GetResponse get = etcd.getKVClient().get(POOL_KEY, getOptions).get();
+        GetResponse get = kvClient.get(POOL_KEY, getOptions).get();
 
         List<ByteSequence> claimedResources = get.getKvs().stream()
                 .map(KeyValue::getKey)
@@ -267,7 +274,7 @@ public class ResourceClaim implements Closeable {
             );
             awaitLatchUnlessItTakesTooLong(latch, giveUpAfter);
             watcher.close();
-            return claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter);
+            return claimResource(kvClient, maxGeneratorCount, clusterIds, giveUpAfter);
         }
 
         // Try to claim an available resource.
@@ -310,7 +317,7 @@ public class ResourceClaim implements Closeable {
             }
         }
 
-        return claimResource(etcd, maxGeneratorCount, clusterIds, giveUpAfter);
+        return claimResource(kvClient, maxGeneratorCount, clusterIds, giveUpAfter);
     }
 
     /**
@@ -319,7 +326,7 @@ public class ResourceClaim implements Closeable {
     private void relinquishResource() {
         logger.debug("Relinquishing claimed resource {}:{}.", clusterId, generatorId);
         try {
-            etcd.getLeaseClient().revoke(leaseId).get();
+            leaseClient.revoke(leaseId).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
