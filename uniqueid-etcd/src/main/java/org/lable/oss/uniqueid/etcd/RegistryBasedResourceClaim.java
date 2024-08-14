@@ -66,7 +66,10 @@ public class RegistryBasedResourceClaim {
         this.registryEntry = registryEntry;
         this.connectToEtcd = connectToEtcd;
 
-        logger.info("Acquiring resource-claim…");
+        Duration timeout = acquisitionTimeout == null
+                ? Duration.ofMinutes(5)
+                : acquisitionTimeout;
+        logger.info("Acquiring resource-claim; timeout is set to {}.", timeout);
 
         Client etcd = connectToEtcd.get();
 
@@ -78,22 +81,23 @@ public class RegistryBasedResourceClaim {
 
         List<Integer> clusterIds = ClusterID.get(etcd);
 
-        Duration timeout = acquisitionTimeout == null
-                ? Duration.ofMinutes(5)
-                : acquisitionTimeout;
+
         Instant giveUpAfter = Instant.now().plus(timeout);
+        long timeoutSeconds = timeout.getSeconds();
 
         this.poolSize = maxGeneratorCount;
 
-        ResourcePair resourcePair = null;
+        ResourcePair resourcePair;
+        LockResponse lock;
+        long leaseId;
         try {
-            logger.debug("Acquiring lock, timeout is set to {}.", timeout);
+            logger.debug("Acquiring lock.");
             // Have the lease TTL just a bit after our timeout.
-            LeaseGrantResponse lease = etcd.getLeaseClient().grant(timeout.plusSeconds(5).getSeconds()).get();
-            long leaseId = lease.getID();
+            LeaseGrantResponse lease = etcd.getLeaseClient().grant(timeoutSeconds + 5).get(timeoutSeconds, TimeUnit.SECONDS);
+            leaseId = lease.getID();
+            logger.debug("Got lease {}.", leaseId);
 
             // Acquire the lock. This makes sure we are the only process claiming a resource.
-            LockResponse lock;
             try {
                 lock = etcd.getLockClient()
                         .lock(LOCK_NAME, leaseId)
@@ -102,39 +106,44 @@ public class RegistryBasedResourceClaim {
                 throw new IOException("Process timed out.");
             }
 
-            // Keep the lease alive for another period in order to safely finish claiming the resource.
-            etcd.getLeaseClient().keepAliveOnce(leaseId).get();
-
             if (logger.isDebugEnabled()) {
                 logger.debug("Acquired lock: {}.", lock.getKey().toString(StandardCharsets.UTF_8));
             }
+
+            // Keep the lease alive for another period in order to safely finish claiming the resource.
+            etcd.getLeaseClient().keepAliveOnce(leaseId).get(timeoutSeconds, TimeUnit.SECONDS);
+
+            logger.debug("Lease renewed.");
 
             resourcePair = claimResource(
                     etcd, maxGeneratorCount, clusterIds, giveUpAfter, waitWhenNoResourcesAvailable
             );
             this.clusterId = resourcePair.clusterId;
             this.generatorId = resourcePair.generatorId;
+        } catch (TimeoutException | ExecutionException e) {
+            throw new IOException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        }
 
+        try {
             // Explicitly release the lock. If this line is not reached due to exceptions raised, the lock will
             // automatically be removed when the lease holding it expires.
-            etcd.getLockClient().unlock(lock.getKey()).get();
+            etcd.getLockClient().unlock(lock.getKey()).get(timeoutSeconds, TimeUnit.SECONDS);
             if (logger.isDebugEnabled()) {
                 logger.debug("Released lock: {}.", lock.getKey().toString(StandardCharsets.UTF_8));
             }
 
             // Revoke the lease instead of letting it time out.
-            etcd.getLeaseClient().revoke(leaseId).get();
-        } catch (ExecutionException e) {
-            if (resourcePair != null) {
-                close();
-            }
-            throw new IOException(e);
+            etcd.getLeaseClient().revoke(leaseId).get(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (TimeoutException | ExecutionException e) {
+            logger.warn(
+                    "Failed to release lock {} (will be released automatically by Etcd server). Resource-claims was successfully acquired though.",
+                    lock.getKey().toString(StandardCharsets.UTF_8)
+            );
         } catch (InterruptedException e) {
-            if (resourcePair != null) {
-                close();
-            }
             Thread.currentThread().interrupt();
-            throw new IOException(e);
         }
 
         logger.debug("Resource-claim acquired ({}/{}).", clusterId, generatorId);
@@ -276,10 +285,10 @@ public class RegistryBasedResourceClaim {
         ByteSequence resourcePath = ByteSequence.from(resourcePathString, StandardCharsets.UTF_8);
 
         try {
-            kvClient.delete(resourcePath).get();
+            kvClient.delete(resourcePath).get(5, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | TimeoutException e) {
             logger.error("Failed to revoke Etcd lease.", e);
         }
     }
