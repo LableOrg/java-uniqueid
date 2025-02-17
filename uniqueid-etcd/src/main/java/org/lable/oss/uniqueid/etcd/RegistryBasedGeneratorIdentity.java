@@ -102,13 +102,10 @@ public class RegistryBasedGeneratorIdentity implements GeneratorIdentityHolder {
             );
         } catch (IOException e) {
             if (retries < 3) {
-                logger.warn(
-                        "Connection to Etcd failed, retrying claim acquisition, attempt " + (retries + 1) + ".",
-                        e
-                );
+                logger.warn("Connection to Etcd failed, retrying claim acquisition, attempt {}.", retries + 1, e);
                 return acquireResourceClaim(registryEntry, retries + 1);
             } else {
-                logger.error("Failed to acquire resource claim after attempt " + (retries + 1) + ".", e);
+                logger.error("Failed to acquire resource claim after attempt {}.", retries + 1, e);
                 throw new GeneratorException(e);
             }
         }
@@ -117,6 +114,7 @@ public class RegistryBasedGeneratorIdentity implements GeneratorIdentityHolder {
     Client getEtcdConnection() {
         return Client.builder()
                 .endpoints(endpoints.split(","))
+                .loadBalancerPolicy("round_robin")
                 .namespace(ByteSequence.from(namespace, StandardCharsets.UTF_8))
                 .build();
     }
