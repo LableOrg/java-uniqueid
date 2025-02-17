@@ -27,7 +27,7 @@
 
   <groupId>org.lable.oss.uniqueid</groupId>
   <artifactId>uniqueid</artifactId>
-  <version>4.6-SNAPSHOT</version>
+  <version>4.6</version>
   <packaging>pom</packaging>
 
   <name>UniqueID</name>
@@ -62,7 +62,7 @@
     <connection>scm:git:git@github.com:LableOrg/java-uniqueid.git</connection>
     <developerConnection>scm:git:git@github.com:LableOrg/java-uniqueid.git</developerConnection>
     <url>https://github.com/LableOrg/java-uniqueid</url>
-    <tag>v4.5</tag>
+    <tag>v4.6</tag>
   </scm>
 
   <developers>
